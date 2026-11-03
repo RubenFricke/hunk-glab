@@ -1,4 +1,3 @@
-import { existsSync } from 'node:fs';
 import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -153,6 +152,32 @@ describe('createGlabCommand', () => {
     await expect(
       createGlabCommand({ fetch, patches })(MR_ARGS, ctx),
     ).rejects.toMatchObject({ message: 'GitLab diff loading was cancelled.' });
-    expect(existsSync(root) && (await readdir(root))).toEqual([]);
+    expect(await readdir(root)).toEqual([]);
+  });
+
+  it('writes no patch when the run is cancelled after the fetch', async () => {
+    const controller = new AbortController();
+    const { ctx } = recordCliContext({ signal: controller.signal });
+    const { fetch } = recordFetch(() => {
+      let sent = false;
+      return new Response(
+        new ReadableStream<Uint8Array>({
+          pull: (stream) => {
+            if (sent) {
+              controller.abort();
+              stream.close();
+              return;
+            }
+            sent = true;
+            stream.enqueue(new TextEncoder().encode(DIFF));
+          },
+        }),
+      );
+    });
+
+    await expect(
+      createGlabCommand({ fetch, patches })(MR_ARGS, ctx),
+    ).rejects.toMatchObject({ message: 'GitLab diff loading was cancelled.' });
+    expect(await readdir(root)).toEqual([]);
   });
 });
