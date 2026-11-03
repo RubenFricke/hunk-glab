@@ -205,27 +205,35 @@ describe('createGlabCommand', () => {
       if (!url.endsWith('/raw_diffs')) {
         return respond(url);
       }
-      let sent = false;
-      return new Response(
-        new ReadableStream<Uint8Array>({
-          pull: (stream) => {
-            if (sent) {
-              controller.abort();
-              stream.close();
-              return;
-            }
-            sent = true;
-            stream.enqueue(new TextEncoder().encode(DIFF));
-          },
-        }),
-      );
+      /** A reader that cancels the run exactly when the body ends. */
+      const chunks = [new TextEncoder().encode(DIFF)];
+      const response = new Response(DIFF);
+      Object.defineProperty(response, 'body', {
+        value: {
+          getReader: () => ({
+            read: () => {
+              const chunk = chunks.shift();
+              if (chunk === undefined) {
+                controller.abort();
+                return Promise.resolve({ done: true, value: undefined });
+              }
+              return Promise.resolve({ done: false, value: chunk });
+            },
+            cancel: () => Promise.resolve(),
+            releaseLock: () => undefined,
+          }),
+        },
+      });
+      return response;
     });
 
     await expect(
-      createGlabCommand({ fetch, env: {}, readOrigin: refuseOrigin, patches })(
-        MR_ARGS,
-        ctx,
-      ),
+      createGlabCommand({
+        fetch,
+        env: {},
+        readOrigin: refuseOrigin,
+        patches,
+      })(MR_ARGS, ctx),
     ).rejects.toMatchObject({ message: 'GitLab diff loading was cancelled.' });
     expect(await readdir(root)).toEqual([]);
   });
