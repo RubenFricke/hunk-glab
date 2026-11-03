@@ -27,4 +27,14 @@ describe('buildStatusError', () => {
       ],
     });
   });
+
+  it('explains HTTP 404', () => {
+    expect(buildStatusError(404, NAME)).toMatchObject({
+      message: `GitLab could not find an accessible merge request at ${NAME}.`,
+      suggestions: [
+        'Check the project and the merge-request number.',
+        'Private projects need GITLAB_TOKEN with the read_api scope.',
+      ],
+    });
+  });
 });

@@ -28,6 +28,16 @@ const buildStatusError = (
           'Check that the token can read the project and has the read_api scope.',
         ],
       });
+    case 404:
+      return new HunkExtensionUserError(
+        `GitLab could not find an accessible merge request at ${name}.`,
+        {
+          suggestions: [
+            'Check the project and the merge-request number.',
+            'Private projects need GITLAB_TOKEN with the read_api scope.',
+          ],
+        },
+      );
     default:
       return new HunkExtensionUserError(
         `GitLab returned HTTP ${String(status)} for ${name}.`,
