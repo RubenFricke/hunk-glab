@@ -156,4 +156,22 @@ describe('fetchGitLab', () => {
       fetchGitLab(options(fetch, controller.signal)),
     ).rejects.toMatchObject({ message: 'GitLab diff loading was cancelled.' });
   });
+
+  it.each([302, 401, 403, 404, 429, 500])(
+    'keeps the token and the server body out of the HTTP %i message',
+    async (status) => {
+      const canary = 'glpat-canary-secret';
+      const { fetch } = recordFetch(
+        () => new Response(`echo ${canary}`, { status }),
+      );
+
+      const error = await fetchGitLab(
+        options(fetch, undefined, { GITLAB_TOKEN: canary }),
+      ).catch((caught: unknown) => caught);
+
+      expect(error).toMatchObject({ name: 'HunkExtensionUserError' });
+      expect(JSON.stringify(error)).not.toContain('canary');
+      expect(String(error)).not.toContain('canary');
+    },
+  );
 });
