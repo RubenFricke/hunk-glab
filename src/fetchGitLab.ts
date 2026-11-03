@@ -1,6 +1,7 @@
 import { HunkExtensionUserError } from 'hunkdiff/extension';
 
 import buildCancelledError from './utils/buildCancelledError.ts';
+import buildStatusError from './utils/buildStatusError.ts';
 import readBoundedBody from './utils/readBoundedBody.ts';
 
 /** The only place a request goes, so a token never reaches another host. */
@@ -93,9 +94,7 @@ const fetchGitLab = async ({
     );
   }
   if (!response.ok) {
-    throw new HunkExtensionUserError(
-      `GitLab returned HTTP ${String(response.status)} for ${name}.`,
-    );
+    throw buildStatusError(response.status, name);
   }
 
   try {
