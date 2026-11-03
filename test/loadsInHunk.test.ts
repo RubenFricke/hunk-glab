@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import GLAB_CLI_REFERENCE from '../src/glabCliReference.ts';
 import renderGlabHelp from '../src/utils/renderGlabHelp.ts';
+import renderSubcommandHelp from '../src/utils/renderSubcommandHelp.ts';
 
 const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const HUNK_PACKAGE = join(PACKAGE_ROOT, 'node_modules', 'hunkdiff');
@@ -36,17 +37,18 @@ const findHunkCli = async (): Promise<string> => {
 };
 
 /**
- * Runs `hunk --extension <dir> glab --help` without a terminal. The help needs
- * no Git, network or review, so Hunk prints it and stops.
+ * Runs `hunk --extension <dir> glab <args>` without a terminal. Help needs no
+ * Git, network or review, so Hunk prints it and stops.
  */
-const runGlabHelp = async (
+const runGlab = async (
   workDir: string,
   extensionDir: string,
+  args: readonly string[] = ['--help'],
 ): Promise<HunkRun> => {
   const cli = await findHunkCli();
   const child = spawn(
     process.execPath,
-    [cli, '--extension', extensionDir, 'glab', '--help'],
+    [cli, '--extension', extensionDir, 'glab', ...args],
     {
       cwd: workDir,
       env: {
@@ -102,11 +104,30 @@ describe('hunk-glab in Hunk', () => {
   it(
     'registers hunk glab and prints its help in the pinned Hunk',
     async () => {
-      const run = await runGlabHelp(workDir, PACKAGE_ROOT);
+      const run = await runGlab(workDir, PACKAGE_ROOT);
 
       expect(run).toEqual({
         code: 0,
         stdout: renderGlabHelp(GLAB_CLI_REFERENCE),
+        stderr: '',
+      });
+    },
+    HUNK_TIMEOUT_MS * 2,
+  );
+
+  it(
+    'prints the help of hunk glab mr in the pinned Hunk',
+    async () => {
+      const [mr] = GLAB_CLI_REFERENCE.subcommands;
+      if (mr === undefined) {
+        throw new Error('Expected the mr subcommand.');
+      }
+
+      const run = await runGlab(workDir, PACKAGE_ROOT, ['mr', '--help']);
+
+      expect(run).toEqual({
+        code: 0,
+        stdout: renderSubcommandHelp(mr, GLAB_CLI_REFERENCE),
         stderr: '',
       });
     },
@@ -127,7 +148,7 @@ describe('hunk-glab in Hunk', () => {
         "export default () => { throw new Error('broken'); };\n",
       );
 
-      const run = await runGlabHelp(workDir, brokenDir);
+      const run = await runGlab(workDir, brokenDir);
 
       expect(run.code).not.toBe(0);
       expect(run.stdout + run.stderr).toContain(LOAD_FAILED);
