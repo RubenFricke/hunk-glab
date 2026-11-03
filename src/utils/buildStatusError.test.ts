@@ -37,4 +37,11 @@ describe('buildStatusError', () => {
       ],
     });
   });
+
+  it('explains HTTP 429', () => {
+    expect(buildStatusError(429, NAME)).toMatchObject({
+      message: `GitLab API rate limiting blocked ${NAME}.`,
+      suggestions: ['Set GITLAB_TOKEN, or retry after the rate limit resets.'],
+    });
+  });
 });

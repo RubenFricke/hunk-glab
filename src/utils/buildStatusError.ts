@@ -38,6 +38,15 @@ const buildStatusError = (
           ],
         },
       );
+    case 429:
+      return new HunkExtensionUserError(
+        `GitLab API rate limiting blocked ${name}.`,
+        {
+          suggestions: [
+            'Set GITLAB_TOKEN, or retry after the rate limit resets.',
+          ],
+        },
+      );
     default:
       return new HunkExtensionUserError(
         `GitLab returned HTTP ${String(status)} for ${name}.`,
