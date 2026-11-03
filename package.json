@@ -29,8 +29,10 @@
     ]
   },
   "scripts": {
+    "check": "bun run typecheck && bun run lint && bun run format:check && bun run knip && bun run test:coverage",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "knip": "knip",
     "lint": "eslint .",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
@@ -48,6 +50,7 @@
     "eslint-plugin-import-x": "^4.17.1",
     "globals": "^17.13.0",
     "hunkdiff": "0.24.0",
+    "knip": "^6.42.1",
     "prettier": "^3.9.10",
     "prettier-plugin-jsdoc": "^1.8.1",
     "typescript": "~6.0.3",
