@@ -108,6 +108,7 @@ describe('prepareMergeRequest', () => {
       'https://gitlab.com/api/v4/projects/group%2Fproject/merge_requests/7',
     );
     expect(prepared.review.repository).toBe('group/project');
+    expect(prepared.filename).toBe('project-mr-7.diff');
   });
 
   it('rejects an origin outside gitlab.com before any request', async () => {

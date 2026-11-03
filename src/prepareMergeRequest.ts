@@ -77,7 +77,8 @@ const prepareMergeRequest = async ({
     signal: ctx.signal,
     fetch: dependencies.fetch,
   });
-  const projectName = project.path.split('/').at(-1) ?? 'project';
+  /** The header names the project by path, also when the user gave an id. */
+  const projectName = review.repository?.split('/').at(-1) ?? 'project';
   return {
     bytes,
     filename: `${projectName}-mr-${String(iid)}.diff`,
