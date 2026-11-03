@@ -28,8 +28,13 @@
       "./src/index.ts"
     ]
   },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
   "packageManager": "bun@1.4.4",
   "devDependencies": {
-    "hunkdiff": "0.24.0"
+    "@types/node": "^26.6.5",
+    "hunkdiff": "0.24.0",
+    "typescript": "~6.0.3"
   }
 }
