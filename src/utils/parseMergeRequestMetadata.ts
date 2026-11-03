@@ -5,10 +5,14 @@ import {
 
 import type { MergeRequestTarget } from './describeMergeRequest.ts';
 import hasControlCharacter from './hasControlCharacter.ts';
+import parseGitLabProject, {
+  type GitLabProject,
+} from './parseGitLabProject.ts';
 
 const MAX_TITLE_BYTES = 2 * 1024;
 const MAX_URL_BYTES = 2 * 1024;
 const MAX_NAME_BYTES = 512;
+const MERGE_REQUEST_PAGE = /^\/(.+)\/-\/merge_requests\/(\d+)$/;
 
 type ShownState = NonNullable<ExtensionChangeRequestReviewDescriptor['state']>;
 
@@ -81,8 +85,6 @@ const parseMergeRequestMetadata = (
   } catch {
     throw malformed();
   }
-  const expectedPath =
-    `/${target.project.path}/-/merge_requests/${String(target.iid)}`.toLowerCase();
   if (
     url.protocol !== 'https:' ||
     url.hostname !== 'gitlab.com' ||
@@ -90,9 +92,21 @@ const parseMergeRequestMetadata = (
     url.username ||
     url.password ||
     url.search ||
-    url.hash ||
-    url.pathname.toLowerCase() !== expectedPath
+    url.hash
   ) {
+    throw malformed();
+  }
+  const page = MERGE_REQUEST_PAGE.exec(url.pathname);
+  if (page?.[1] === undefined || page[2] !== String(target.iid)) {
+    throw malformed();
+  }
+  let pageProject: GitLabProject;
+  try {
+    pageProject = parseGitLabProject(page[1]);
+  } catch {
+    throw malformed();
+  }
+  if (pageProject.path.toLowerCase() !== target.project.path.toLowerCase()) {
     throw malformed();
   }
 
