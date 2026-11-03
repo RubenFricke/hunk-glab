@@ -25,6 +25,7 @@ const fetchWith = (
   fetchMergeRequestMetadata({
     target: TARGET,
     signal: new AbortController().signal,
+    env: {},
     fetch: recordFetch(() => new Response(body, { headers })).fetch,
   });
 
@@ -38,6 +39,7 @@ describe('fetchMergeRequestMetadata', () => {
       target: TARGET,
       signal: new AbortController().signal,
       fetch,
+      env: {},
     });
 
     expect(requests.map(({ url }) => url)).toEqual([

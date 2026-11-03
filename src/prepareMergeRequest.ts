@@ -3,7 +3,10 @@ import type {
   ExtensionCliCommandContext,
 } from 'hunkdiff/extension';
 
-import fetchGitLab, { type GitLabFetch } from './fetchGitLab.ts';
+import fetchGitLab, {
+  type GitLabEnv,
+  type GitLabFetch,
+} from './fetchGitLab.ts';
 import fetchMergeRequestMetadata from './fetchMergeRequestMetadata.ts';
 import resolveProject, { type ReadOrigin } from './resolveProject.ts';
 import describeMergeRequest from './utils/describeMergeRequest.ts';
@@ -15,6 +18,7 @@ const MAX_DIFF_BYTES = 64 * 1024 * 1024;
 /** What `hunk glab mr` needs from outside the process. */
 export interface MergeRequestDependencies {
   readonly fetch: GitLabFetch;
+  readonly env: GitLabEnv;
   readonly readOrigin: ReadOrigin;
 }
 
@@ -66,6 +70,7 @@ const prepareMergeRequest = async ({
     target,
     signal: ctx.signal,
     fetch: dependencies.fetch,
+    env: dependencies.env,
   });
   const bytes = await fetchGitLab({
     apiPath: `projects/${encodeProject(project)}/merge_requests/${String(iid)}/raw_diffs`,
@@ -76,6 +81,7 @@ const prepareMergeRequest = async ({
     emptyMessage: 'GitLab returned an empty diff.',
     signal: ctx.signal,
     fetch: dependencies.fetch,
+    env: dependencies.env,
   });
   /** The header names the project by path, also when the user gave an id. */
   const projectName = review.repository?.split('/').at(-1) ?? 'project';

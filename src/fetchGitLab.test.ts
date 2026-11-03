@@ -8,6 +8,7 @@ const NAME = 'gitlab-org/cli!4306';
 const options = (
   fetch: FetchGitLabOptions['fetch'],
   signal = new AbortController().signal,
+  env: FetchGitLabOptions['env'] = {},
 ): FetchGitLabOptions => ({
   apiPath: 'projects/gitlab-org%2Fcli/merge_requests/4306/raw_diffs',
   accept: 'text/plain',
@@ -17,6 +18,7 @@ const options = (
   emptyMessage: 'Empty.',
   signal,
   fetch,
+  env,
 });
 
 const decode = (bytes: Uint8Array): string => new TextDecoder().decode(bytes);
@@ -37,6 +39,23 @@ describe('fetchGitLab', () => {
       accept: 'text/plain',
       'user-agent': 'hunk-glab',
     });
+  });
+
+  it.each([
+    [
+      { GITLAB_TOKEN: 'glpat-first', GITLAB_ACCESS_TOKEN: 'glpat-second' },
+      'glpat-first',
+    ],
+    [{ GITLAB_ACCESS_TOKEN: 'glpat-second' }, 'glpat-second'],
+    [{ GITLAB_TOKEN: '', GITLAB_ACCESS_TOKEN: 'glpat-second' }, 'glpat-second'],
+  ])('sends the token of %j as a bearer token', async (env, token) => {
+    const { requests, fetch } = recordFetch(() => new Response('diff'));
+
+    await fetchGitLab(options(fetch, undefined, env));
+
+    expect(new Headers(requests[0]?.init.headers).get('authorization')).toBe(
+      `Bearer ${token}`,
+    );
   });
 
   it('refuses a redirect', async () => {

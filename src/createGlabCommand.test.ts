@@ -48,6 +48,7 @@ describe('createGlabCommand', () => {
 
       const result = await createGlabCommand({
         fetch: refuseFetch,
+        env: {},
         readOrigin: refuseOrigin,
         patches,
       })(args, ctx);
@@ -64,6 +65,7 @@ describe('createGlabCommand', () => {
     await expect(
       createGlabCommand({
         fetch: refuseFetch,
+        env: {},
         readOrigin: refuseOrigin,
         patches,
       })(['foo', '1'], ctx),
@@ -81,6 +83,7 @@ describe('createGlabCommand', () => {
     await expect(
       createGlabCommand({
         fetch: refuseFetch,
+        env: {},
         readOrigin: refuseOrigin,
         patches,
       })(['pr', '1'], ctx),
@@ -96,6 +99,7 @@ describe('createGlabCommand', () => {
     await expect(
       createGlabCommand({
         fetch: refuseFetch,
+        env: {},
         readOrigin: refuseOrigin,
         patches,
       })(['\u001b[2Jmr'], ctx),
@@ -110,6 +114,7 @@ describe('createGlabCommand', () => {
 
     const result = await createGlabCommand({
       fetch,
+      env: {},
       readOrigin: refuseOrigin,
       patches,
     })([...MR_ARGS, '--', '--mode', 'unified'], ctx);
@@ -147,6 +152,7 @@ describe('createGlabCommand', () => {
     await expect(
       createGlabCommand({
         fetch,
+        env: {},
         readOrigin: refuseOrigin,
         patches: abortingPatches,
       })(MR_ARGS, ctx),
@@ -167,7 +173,7 @@ describe('createGlabCommand', () => {
     const { fetch } = recordFetch(respond);
 
     await expect(
-      createGlabCommand({ fetch, readOrigin: refuseOrigin, patches })(
+      createGlabCommand({ fetch, env: {}, readOrigin: refuseOrigin, patches })(
         MR_ARGS,
         ctx,
       ),
@@ -184,7 +190,7 @@ describe('createGlabCommand', () => {
     });
 
     await expect(
-      createGlabCommand({ fetch, readOrigin: refuseOrigin, patches })(
+      createGlabCommand({ fetch, env: {}, readOrigin: refuseOrigin, patches })(
         MR_ARGS,
         ctx,
       ),
@@ -216,7 +222,7 @@ describe('createGlabCommand', () => {
     });
 
     await expect(
-      createGlabCommand({ fetch, readOrigin: refuseOrigin, patches })(
+      createGlabCommand({ fetch, env: {}, readOrigin: refuseOrigin, patches })(
         MR_ARGS,
         ctx,
       ),

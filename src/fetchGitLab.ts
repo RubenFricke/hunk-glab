@@ -9,6 +9,9 @@ const USER_AGENT = 'hunk-glab';
 
 export type GitLabFetch = (url: string, init: RequestInit) => Promise<Response>;
 
+/** The environment variables a token is read from. */
+export type GitLabEnv = Readonly<Record<string, string | undefined>>;
+
 export interface FetchGitLabOptions {
   /** The API path after `/api/v4/`, already encoded. */
   readonly apiPath: string;
@@ -20,6 +23,8 @@ export interface FetchGitLabOptions {
   readonly emptyMessage: string;
   readonly signal: AbortSignal;
   readonly fetch: GitLabFetch;
+  /** `GITLAB_TOKEN`, else `GITLAB_ACCESS_TOKEN`; without one, anonymous. */
+  readonly env: GitLabEnv;
 }
 
 /**
@@ -40,6 +45,7 @@ const fetchGitLab = async ({
   emptyMessage,
   signal,
   fetch,
+  env,
 }: FetchGitLabOptions): Promise<Uint8Array> => {
   const unreachable = (): HunkExtensionUserError =>
     signal.aborted
@@ -49,10 +55,17 @@ const fetchGitLab = async ({
           { suggestions: ['Check network access and retry.'] },
         );
 
+  const headers = new Headers({ Accept: accept, 'User-Agent': USER_AGENT });
+  /** An empty variable counts as unset, the way `hunk gh` reads its tokens. */
+  const token = [env.GITLAB_TOKEN, env.GITLAB_ACCESS_TOKEN].find(Boolean);
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
   let response: Response;
   try {
     response = await fetch(`${GITLAB_API_ORIGIN}/${apiPath}`, {
-      headers: new Headers({ Accept: accept, 'User-Agent': USER_AGENT }),
+      headers,
       redirect: 'manual',
       signal,
     });

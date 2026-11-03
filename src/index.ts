@@ -17,7 +17,12 @@ const glabExtension = (hunk: HunkExtensionAPI): void => {
   const { name, summary, usage } = GLAB_CLI_REFERENCE;
   hunk.registerCliCommand(
     { name, summary, usage },
-    createGlabCommand({ fetch, readOrigin: readGitOrigin, patches }),
+    createGlabCommand({
+      fetch,
+      env: process.env,
+      readOrigin: readGitOrigin,
+      patches,
+    }),
   );
   hunk.on('shutdown', patches.cleanup);
 };

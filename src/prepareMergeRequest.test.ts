@@ -33,7 +33,7 @@ describe('prepareMergeRequest', () => {
         '4',
       ],
       ctx,
-      dependencies: { fetch, readOrigin: refuseOrigin },
+      dependencies: { fetch, env: {}, readOrigin: refuseOrigin },
     });
 
     expect(requests.map(({ url }) => url)).toEqual([
@@ -76,14 +76,14 @@ describe('prepareMergeRequest', () => {
       prepareMergeRequest({
         args,
         ctx: recordCliContext().ctx,
-        dependencies: { fetch: empty.fetch, readOrigin: refuseOrigin },
+        dependencies: { fetch: empty.fetch, env: {}, readOrigin: refuseOrigin },
       }),
     ).rejects.toMatchObject({ message: 'GitLab returned an empty diff.' });
     await expect(
       prepareMergeRequest({
         args,
         ctx: recordCliContext().ctx,
-        dependencies: { fetch: big.fetch, readOrigin: refuseOrigin },
+        dependencies: { fetch: big.fetch, env: {}, readOrigin: refuseOrigin },
       }),
     ).rejects.toMatchObject({
       message: 'The GitLab diff exceeds the 64 MiB safety limit.',
@@ -100,6 +100,7 @@ describe('prepareMergeRequest', () => {
       ctx: recordCliContext().ctx,
       dependencies: {
         fetch,
+        env: {},
         readOrigin: () => Promise.resolve('git@gitlab.com:group/project.git'),
       },
     });
@@ -120,6 +121,7 @@ describe('prepareMergeRequest', () => {
         ctx: recordCliContext().ctx,
         dependencies: {
           fetch,
+          env: {},
           readOrigin: () => Promise.resolve('git@github.com:a/b.git'),
         },
       }),
@@ -138,7 +140,7 @@ describe('prepareMergeRequest', () => {
         prepareMergeRequest({
           args,
           ctx: recordCliContext().ctx,
-          dependencies: { fetch, readOrigin: refuseOrigin },
+          dependencies: { fetch, env: {}, readOrigin: refuseOrigin },
         }),
       ).rejects.toMatchObject({ name: 'HunkExtensionUserError' });
       expect(requests).toEqual([]);
@@ -154,7 +156,7 @@ describe('prepareMergeRequest', () => {
     const prepared = await prepareMergeRequest({
       args: ['4306', '--repo=34675721'],
       ctx,
-      dependencies: { fetch, readOrigin: refuseOrigin },
+      dependencies: { fetch, env: {}, readOrigin: refuseOrigin },
     });
 
     expect(requests.map(({ url }) => url)).toEqual([

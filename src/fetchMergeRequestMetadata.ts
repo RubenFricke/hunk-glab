@@ -3,7 +3,10 @@ import {
   HunkExtensionUserError,
 } from 'hunkdiff/extension';
 
-import fetchGitLab, { type GitLabFetch } from './fetchGitLab.ts';
+import fetchGitLab, {
+  type GitLabEnv,
+  type GitLabFetch,
+} from './fetchGitLab.ts';
 import describeMergeRequest, {
   type MergeRequestTarget,
 } from './utils/describeMergeRequest.ts';
@@ -16,6 +19,7 @@ interface FetchMergeRequestMetadataOptions {
   readonly target: MergeRequestTarget;
   readonly signal: AbortSignal;
   readonly fetch: GitLabFetch;
+  readonly env: GitLabEnv;
 }
 
 /**
@@ -30,6 +34,7 @@ const fetchMergeRequestMetadata = async ({
   target,
   signal,
   fetch,
+  env,
 }: FetchMergeRequestMetadataOptions): Promise<ExtensionChangeRequestReviewDescriptor> => {
   const bytes = await fetchGitLab({
     apiPath: `projects/${encodeProject(target.project)}/merge_requests/${String(target.iid)}`,
@@ -41,6 +46,7 @@ const fetchMergeRequestMetadata = async ({
     emptyMessage: 'GitLab returned empty merge-request metadata.',
     signal,
     fetch,
+    env,
   });
 
   let metadata: unknown;
