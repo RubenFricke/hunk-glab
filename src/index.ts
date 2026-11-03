@@ -1,0 +1,16 @@
+import type { HunkExtensionAPI } from 'hunkdiff/extension';
+
+import createGlabCommand from './createGlabCommand.ts';
+import GLAB_CLI_REFERENCE from './glabCliReference.ts';
+
+/**
+ * Registers `hunk glab` with Hunk.
+ *
+ * @param hunk - The Hunk extension API.
+ */
+const glabExtension = (hunk: HunkExtensionAPI): void => {
+  const { name, summary, usage } = GLAB_CLI_REFERENCE;
+  hunk.registerCliCommand({ name, summary, usage }, createGlabCommand());
+};
+
+export default glabExtension;

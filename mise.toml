@@ -1,0 +1,6 @@
+# Tools for working on the extension. Hunk itself runs it in its own Bun.
+[tools]
+# The Bun version Hunk 0.24 is built with.
+bun = "1.4.4"
+# Vitest, ESLint, Prettier and the `hunk` wrapper of hunkdiff run on Node.js.
+node = "26"
