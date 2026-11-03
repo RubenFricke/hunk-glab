@@ -14,9 +14,33 @@ describe('GLAB_CLI_REFERENCE', () => {
   it('describes the command for discovery and help', () => {
     expect(GLAB_CLI_REFERENCE).toMatchObject({
       summary: 'Review GitLab merge requests',
-      usage: '<command>',
+      usage: 'mr <merge-request> [--repo <group/project>]',
       description:
         'Review GitLab merge requests in Hunk without requiring the glab CLI.',
     });
+  });
+
+  it('describes the shared options and the tokens', () => {
+    expect(GLAB_CLI_REFERENCE.options.map(({ flag }) => flag)).toEqual([
+      '--repo <group/project>',
+      '-- <patch-options...>',
+    ]);
+    expect(GLAB_CLI_REFERENCE.authentication.variables).toEqual([
+      'GITLAB_TOKEN',
+      'GITLAB_ACCESS_TOKEN',
+    ]);
+  });
+
+  it('describes hunk glab mr with its forms', () => {
+    const [mr] = GLAB_CLI_REFERENCE.subcommands;
+
+    expect(GLAB_CLI_REFERENCE.subcommands).toHaveLength(1);
+    expect(mr?.name).toBe('mr');
+    expect(mr?.forms.map(({ args }) => args)).toEqual([
+      '123',
+      "'!123'",
+      '123 --repo gitlab-org/cli',
+      '123 --repo 34675721',
+    ]);
   });
 });
