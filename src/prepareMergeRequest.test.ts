@@ -3,15 +3,20 @@ import { describe, expect, it } from 'vitest';
 import prepareMergeRequest from './prepareMergeRequest.ts';
 import recordCliContext from '../test/recordCliContext.ts';
 import recordFetch from '../test/recordFetch.ts';
+import respondWithMergeRequest from '../test/respondWithMergeRequest.ts';
 
-const RAW_DIFFS =
-  'https://gitlab.com/api/v4/projects/vbti-products%2Fadam-one%2Fadam-one-app/merge_requests/12/raw_diffs';
+const MERGE_REQUEST =
+  'https://gitlab.com/api/v4/projects/vbti-products%2Fadam-one%2Fadam-one-app/merge_requests/12';
 
 describe('prepareMergeRequest', () => {
-  it('fetches the raw diff of the merge request', async () => {
+  it('fetches the metadata and the raw diff of the merge request', async () => {
     const { stderr, ctx } = recordCliContext();
     const { requests, fetch } = recordFetch(
-      () => new Response('diff --git a/a b/a\n'),
+      respondWithMergeRequest({
+        path: 'vbti-products/adam-one/adam-one-app',
+        iid: 12,
+        diff: 'diff --git a/a b/a\n',
+      }),
     );
 
     const prepared = await prepareMergeRequest({
@@ -27,7 +32,10 @@ describe('prepareMergeRequest', () => {
       dependencies: { fetch },
     });
 
-    expect(requests.map(({ url }) => url)).toEqual([RAW_DIFFS]);
+    expect(requests.map(({ url }) => url)).toEqual([
+      MERGE_REQUEST,
+      `${MERGE_REQUEST}/raw_diffs`,
+    ]);
     expect(stderr).toEqual([
       'Fetching GitLab merge request vbti-products/adam-one/adam-one-app!12…\n',
     ]);
@@ -37,16 +45,26 @@ describe('prepareMergeRequest', () => {
     expect(prepared).toMatchObject({
       filename: 'adam-one-app-mr-12.diff',
       patchArgs: ['-x', '4'],
+      review: {
+        kind: 'change-request',
+        provider: 'GitLab',
+        id: '!12',
+        repository: 'vbti-products/adam-one/adam-one-app',
+        state: 'open',
+        draft: true,
+      },
     });
   });
 
   it('names the 64 MiB limit and an empty diff', async () => {
-    const empty = recordFetch(() => new Response(''));
-    const big = recordFetch(
-      () =>
-        new Response('x', {
-          headers: { 'content-length': String(64 * 1024 * 1024 + 1) },
-        }),
+    const metadata = respondWithMergeRequest({ path: 'a/b', iid: 1, diff: '' });
+    const empty = recordFetch(metadata);
+    const big = recordFetch((url) =>
+      url.endsWith('/raw_diffs')
+        ? new Response('x', {
+            headers: { 'content-length': String(64 * 1024 * 1024 + 1) },
+          })
+        : metadata(url),
     );
     const args = ['1', '--repo', 'a/b'];
 

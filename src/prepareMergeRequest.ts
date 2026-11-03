@@ -1,6 +1,10 @@
-import type { ExtensionCliCommandContext } from 'hunkdiff/extension';
+import type {
+  ExtensionChangeRequestReviewDescriptor,
+  ExtensionCliCommandContext,
+} from 'hunkdiff/extension';
 
 import fetchGitLab, { type GitLabFetch } from './fetchGitLab.ts';
+import fetchMergeRequestMetadata from './fetchMergeRequestMetadata.ts';
 import buildInvocationError from './utils/buildInvocationError.ts';
 import describeMergeRequest from './utils/describeMergeRequest.ts';
 import encodeProject from './utils/encodeProject.ts';
@@ -25,14 +29,16 @@ interface PreparedDiff {
   readonly bytes: Uint8Array;
   readonly filename: string;
   readonly patchArgs: readonly string[];
+  /** The header Hunk shows above the review. */
+  readonly review: ExtensionChangeRequestReviewDescriptor;
 }
 
 /**
- * Resolves one `hunk glab mr` invocation and fetches the diff of its merge
- * request.
+ * Resolves one `hunk glab mr` invocation and fetches the metadata and the diff
+ * of its merge request.
  *
  * @param options - The arguments, the command context and the dependencies.
- * @returns The diff and the options for `hunk patch`.
+ * @returns The diff, the review header and the options for `hunk patch`.
  * @throws {HunkExtensionUserError} When the invocation is invalid or GitLab
  *   does not return the diff.
  */
@@ -49,6 +55,11 @@ const prepareMergeRequest = async ({
   const target = { project, iid };
   const name = describeMergeRequest(target);
   await ctx.stderr.write(`Fetching GitLab merge request ${name}…\n`);
+  const review = await fetchMergeRequestMetadata({
+    target,
+    signal: ctx.signal,
+    fetch: dependencies.fetch,
+  });
   const bytes = await fetchGitLab({
     apiPath: `projects/${encodeProject(project)}/merge_requests/${String(iid)}/raw_diffs`,
     accept: 'text/plain',
@@ -64,6 +75,7 @@ const prepareMergeRequest = async ({
     bytes,
     filename: `${projectName}-mr-${String(iid)}.diff`,
     patchArgs,
+    review,
   };
 };
 

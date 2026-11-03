@@ -9,10 +9,16 @@ import createPatchStore, { type PatchStore } from './createPatchStore.ts';
 import GLAB_CLI_REFERENCE from './glabCliReference.ts';
 import recordCliContext from '../test/recordCliContext.ts';
 import recordFetch from '../test/recordFetch.ts';
+import respondWithMergeRequest from '../test/respondWithMergeRequest.ts';
 import renderGlabHelp from './utils/renderGlabHelp.ts';
 
 const DIFF = 'diff --git a/a b/a\n';
 const MR_ARGS = ['mr', '4306', '--repo', 'gitlab-org/cli'];
+const respond = respondWithMergeRequest({
+  path: 'gitlab-org/cli',
+  iid: 4306,
+  diff: DIFF,
+});
 
 /** A fetch that fails the test when a command reaches the network. */
 const refuseFetch = (): Promise<Response> =>
@@ -83,14 +89,17 @@ describe('createGlabCommand', () => {
 
   it('hands the fetched merge request to hunk patch', async () => {
     const { stderr, ctx } = recordCliContext();
-    const { fetch } = recordFetch(() => new Response(DIFF));
+    const { fetch } = recordFetch(respond);
 
     const result = await createGlabCommand({ fetch, patches })(
       [...MR_ARGS, '--', '--mode', 'unified'],
       ctx,
     );
 
-    expect(result).toMatchObject({ kind: 'delegate' });
+    expect(result).toMatchObject({
+      kind: 'delegate',
+      review: { id: '!4306', repository: 'gitlab-org/cli' },
+    });
     if (result.kind !== 'delegate') {
       return;
     }
@@ -107,7 +116,7 @@ describe('createGlabCommand', () => {
   it('removes the patch when the run is cancelled after writing it', async () => {
     const controller = new AbortController();
     const { ctx } = recordCliContext({ signal: controller.signal });
-    const { fetch } = recordFetch(() => new Response(DIFF));
+    const { fetch } = recordFetch(respond);
     const abortingPatches: PatchStore = {
       ...patches,
       write: async (filename, bytes) => {
@@ -133,7 +142,7 @@ describe('createGlabCommand', () => {
         }
       },
     });
-    const { fetch } = recordFetch(() => new Response(DIFF));
+    const { fetch } = recordFetch(respond);
 
     await expect(
       createGlabCommand({ fetch, patches })(MR_ARGS, ctx),
@@ -144,9 +153,9 @@ describe('createGlabCommand', () => {
   it('writes no patch when the run is cancelled during the fetch', async () => {
     const controller = new AbortController();
     const { ctx } = recordCliContext({ signal: controller.signal });
-    const { fetch } = recordFetch(() => {
+    const { fetch } = recordFetch((url) => {
       controller.abort();
-      return new Response(DIFF);
+      return respond(url);
     });
 
     await expect(
@@ -158,7 +167,10 @@ describe('createGlabCommand', () => {
   it('writes no patch when the run is cancelled after the fetch', async () => {
     const controller = new AbortController();
     const { ctx } = recordCliContext({ signal: controller.signal });
-    const { fetch } = recordFetch(() => {
+    const { fetch } = recordFetch((url) => {
+      if (!url.endsWith('/raw_diffs')) {
+        return respond(url);
+      }
       let sent = false;
       return new Response(
         new ReadableStream<Uint8Array>({
