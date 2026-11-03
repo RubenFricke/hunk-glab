@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { chmod, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -70,4 +70,24 @@ describe('readGitOrigin', () => {
       readGitOrigin(directory, controller.signal),
     ).rejects.toMatchObject({ message: 'GitLab diff loading was cancelled.' });
   });
+
+  it.skipIf(process.platform === 'win32')(
+    'reports a cancel while Git runs as cancelled',
+    async () => {
+      const fakeGit = join(directory, 'git');
+      await writeFile(fakeGit, '#!/bin/sh\nsleep 5\n');
+      await chmod(fakeGit, 0o755);
+      vi.stubEnv('PATH', directory);
+      const controller = new AbortController();
+      setTimeout(() => {
+        controller.abort();
+      }, 50);
+
+      await expect(
+        readGitOrigin(directory, controller.signal),
+      ).rejects.toMatchObject({
+        message: 'GitLab diff loading was cancelled.',
+      });
+    },
+  );
 });
