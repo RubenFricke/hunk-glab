@@ -13,6 +13,15 @@ const buildStatusError = (
   name: string,
 ): HunkExtensionUserError => {
   switch (status) {
+    case 401:
+      return new HunkExtensionUserError(
+        `GitLab rejected the configured token for ${name}.`,
+        {
+          suggestions: [
+            'Refresh GITLAB_TOKEN or GITLAB_ACCESS_TOKEN and retry.',
+          ],
+        },
+      );
     default:
       return new HunkExtensionUserError(
         `GitLab returned HTTP ${String(status)} for ${name}.`,

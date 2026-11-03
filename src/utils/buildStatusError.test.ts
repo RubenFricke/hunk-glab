@@ -11,4 +11,11 @@ describe('buildStatusError', () => {
       suggestions: [],
     });
   });
+
+  it('explains HTTP 401', () => {
+    expect(buildStatusError(401, NAME)).toMatchObject({
+      message: `GitLab rejected the configured token for ${NAME}.`,
+      suggestions: ['Refresh GITLAB_TOKEN or GITLAB_ACCESS_TOKEN and retry.'],
+    });
+  });
 });
