@@ -31,14 +31,19 @@
   "scripts": {
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit"
   },
   "packageManager": "bun@1.4.4",
   "devDependencies": {
     "@types/node": "^26.6.5",
+    "@vitest/coverage-v8": "5.0.5",
     "hunkdiff": "0.24.0",
     "prettier": "^3.9.10",
     "prettier-plugin-jsdoc": "^1.8.1",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
   }
 }
