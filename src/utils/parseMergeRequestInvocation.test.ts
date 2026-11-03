@@ -1,0 +1,68 @@
+import { describe, expect, it } from 'vitest';
+
+import parseMergeRequestInvocation from './parseMergeRequestInvocation.ts';
+
+const GITLAB_CLI = { kind: 'path', path: 'gitlab-org/cli' } as const;
+
+describe('parseMergeRequestInvocation', () => {
+  it('reads a number without a project', () => {
+    expect(parseMergeRequestInvocation(['123'])).toEqual({
+      iid: 123,
+      patchArgs: [],
+    });
+  });
+
+  it.each([
+    [['!123', '--repo', 'gitlab-org/cli']],
+    [['--repo', 'gitlab-org/cli', '123']],
+    [['123', '--repo=gitlab-org/cli']],
+  ])('reads the project from %j', (args) => {
+    expect(parseMergeRequestInvocation(args)).toEqual({
+      iid: 123,
+      project: GITLAB_CLI,
+      patchArgs: [],
+    });
+  });
+
+  it('passes every token after the first -- to hunk patch untouched', () => {
+    expect(
+      parseMergeRequestInvocation([
+        '1',
+        '--',
+        '--mode',
+        'unified',
+        '--repo',
+        '--',
+        'x',
+      ]),
+    ).toEqual({
+      iid: 1,
+      patchArgs: ['--mode', 'unified', '--repo', '--', 'x'],
+    });
+  });
+
+  it.each([
+    [[], 'Specify one merge request.'],
+    [['1', '2'], 'Specify exactly one merge request.'],
+    [['1', '--repo', 'a/b', '--repo', 'a/b'], 'Specify --repo only once.'],
+    [['1', '--repo=a/b', '--repo=a/b'], 'Specify --repo only once.'],
+    [['1', '--repo'], '`--repo` requires a group/project value.'],
+    [['1', '--repo', '--', 'x'], '`--repo` requires a group/project value.'],
+    [['1', '--repo='], '`--repo` requires a group/project value.'],
+    [['1', '--draft'], 'Unknown mr option: --draft'],
+    [['1', '-R', 'a/b'], 'Unknown mr option: -R'],
+    [['1', '--repo', 'project'], 'Invalid GitLab project: project'],
+  ])('rejects %j', (args, message) => {
+    expect(() => parseMergeRequestInvocation(args)).toThrow(
+      expect.objectContaining({ message }),
+    );
+  });
+
+  it('rejects an option with control characters without echoing it', () => {
+    expect(() => parseMergeRequestInvocation(['1', '--\u001b[2Jx'])).toThrow(
+      expect.objectContaining({
+        message: 'Merge-request option cannot contain control characters.',
+      }),
+    );
+  });
+});
