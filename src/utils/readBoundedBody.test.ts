@@ -119,4 +119,19 @@ describe('readBoundedBody', () => {
 
     await expect(read(new Response(stream))).rejects.toThrow('socket closed');
   });
+
+  it('rejects a body that is not a byte stream', async () => {
+    const response = {
+      headers: new Headers(),
+      body: new ReadableStream({
+        pull: (controller) => {
+          controller.enqueue('text');
+        },
+      }),
+    } as unknown as Response;
+
+    await expect(read(response)).rejects.toThrow(
+      'The response body is not a byte stream.',
+    );
+  });
 });
