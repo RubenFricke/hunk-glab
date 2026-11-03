@@ -36,4 +36,22 @@ describe('parseGitLabProject', () => {
       }),
     );
   });
+
+  it('reads a numeric project id', () => {
+    expect(parseGitLabProject('34675721')).toEqual({
+      kind: 'id',
+      id: 34675721,
+    });
+  });
+
+  it.each(['0', '012', '9007199254740993', '-1', '1e3'])(
+    'rejects the id %j',
+    (value) => {
+      expect(() => parseGitLabProject(value)).toThrow(
+        expect.objectContaining({
+          message: `Invalid GitLab project: ${value}`,
+        }),
+      );
+    },
+  );
 });

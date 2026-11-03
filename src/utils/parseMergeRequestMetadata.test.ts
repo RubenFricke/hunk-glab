@@ -111,4 +111,38 @@ describe('parseMergeRequestMetadata', () => {
       parseMergeRequestMetadata({ ...METADATA, web_url: url }, TARGET),
     ).toThrow(expect.objectContaining({ message: MALFORMED }));
   });
+
+  describe('for a project given by id', () => {
+    const BY_ID = { project: { kind: 'id', id: 34675721 }, iid: 4306 } as const;
+
+    it('takes the project path from the page URL', () => {
+      expect(
+        parseMergeRequestMetadata(
+          {
+            ...METADATA,
+            web_url: 'https://gitlab.com/group/sub/cli/-/merge_requests/4306',
+          },
+          BY_ID,
+        ),
+      ).toMatchObject({ repository: 'group/sub/cli', id: '!4306' });
+    });
+
+    it.each([
+      [
+        'another merge request',
+        'https://gitlab.com/group/cli/-/merge_requests/1',
+      ],
+      ['a single-name path', 'https://gitlab.com/cli/-/merge_requests/4306'],
+      [
+        'an invalid path',
+        'https://gitlab.com/gr%20oup/cli/-/merge_requests/4306',
+      ],
+      ['no merge-request path', 'https://gitlab.com/group/cli/-/issues/4306'],
+      ['another host', 'https://evil.test/group/cli/-/merge_requests/4306'],
+    ])('rejects a page URL with %s', (_name, url) => {
+      expect(() =>
+        parseMergeRequestMetadata({ ...METADATA, web_url: url }, BY_ID),
+      ).toThrow(expect.objectContaining({ message: MALFORMED }));
+    });
+  });
 });

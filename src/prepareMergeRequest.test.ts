@@ -144,4 +144,27 @@ describe('prepareMergeRequest', () => {
       expect(requests).toEqual([]);
     },
   );
+
+  it('opens a merge request of a project given by id', async () => {
+    const { stderr, ctx } = recordCliContext();
+    const { requests, fetch } = recordFetch(
+      respondWithMergeRequest({ path: 'gitlab-org/cli', iid: 4306, diff: 'd' }),
+    );
+
+    const prepared = await prepareMergeRequest({
+      args: ['4306', '--repo=34675721'],
+      ctx,
+      dependencies: { fetch, readOrigin: refuseOrigin },
+    });
+
+    expect(requests.map(({ url }) => url)).toEqual([
+      'https://gitlab.com/api/v4/projects/34675721/merge_requests/4306',
+      'https://gitlab.com/api/v4/projects/34675721/merge_requests/4306/raw_diffs',
+    ]);
+    expect(stderr).toEqual(['Fetching GitLab merge request 34675721!4306…\n']);
+    expect(prepared).toMatchObject({
+      filename: 'cli-mr-4306.diff',
+      review: { repository: 'gitlab-org/cli' },
+    });
+  });
 });

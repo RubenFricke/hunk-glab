@@ -26,7 +26,8 @@ const SHOWN_STATES = {
 
 /**
  * Turns the GitLab metadata of a merge request into the header Hunk shows above
- * the review. Every field is checked, because it reaches the terminal.
+ * the review. Every field is checked, because it reaches the terminal. For a
+ * project given by id, the project path comes from the page URL.
  *
  * @param value - The parsed JSON from GitLab.
  * @param target - The merge request that was asked for.
@@ -106,7 +107,11 @@ const parseMergeRequestMetadata = (
   } catch {
     throw malformed();
   }
-  if (pageProject.path.toLowerCase() !== target.project.path.toLowerCase()) {
+  if (
+    pageProject.kind !== 'path' ||
+    (target.project.kind === 'path' &&
+      pageProject.path.toLowerCase() !== target.project.path.toLowerCase())
+  ) {
     throw malformed();
   }
 
@@ -116,7 +121,8 @@ const parseMergeRequestMetadata = (
     title,
     url: pageUrl,
     id: `!${String(target.iid)}`,
-    repository: target.project.path,
+    repository:
+      target.project.kind === 'path' ? target.project.path : pageProject.path,
     author,
     base,
     head,

@@ -11,4 +11,13 @@ describe('describeMergeRequest', () => {
       }),
     ).toBe('gitlab-org/cli!4306');
   });
+
+  it('names a merge request of a project given by id', () => {
+    expect(
+      describeMergeRequest({
+        project: { kind: 'id', id: 34675721 },
+        iid: 4306,
+      }),
+    ).toBe('34675721!4306');
+  });
 });

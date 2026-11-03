@@ -34,7 +34,8 @@ const parseGitLabRemote = (remote: string): GitLabProject | null => {
   }
 
   try {
-    return parseGitLabProject(path.replace(/\.git$/i, ''));
+    const project = parseGitLabProject(path.replace(/\.git$/i, ''));
+    return project.kind === 'path' ? project : null;
   } catch {
     return null;
   }

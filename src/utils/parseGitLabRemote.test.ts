@@ -34,4 +34,8 @@ describe('parseGitLabRemote', () => {
   ])('finds no gitlab.com project in %j', (remote) => {
     expect(parseGitLabRemote(remote)).toBeNull();
   });
+
+  it('finds no project in a remote whose path is only a number', () => {
+    expect(parseGitLabRemote('git@gitlab.com:123.git')).toBeNull();
+  });
 });

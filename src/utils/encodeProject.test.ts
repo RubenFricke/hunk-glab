@@ -11,4 +11,8 @@ describe('encodeProject', () => {
       }),
     ).toBe('vbti-products%2Fpart-inspection%2Fadam-one%2Fadam-one-app');
   });
+
+  it('passes a numeric id as it is', () => {
+    expect(encodeProject({ kind: 'id', id: 34675721 })).toBe('34675721');
+  });
 });
