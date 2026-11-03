@@ -22,6 +22,12 @@ const buildStatusError = (
           ],
         },
       );
+    case 403:
+      return new HunkExtensionUserError(`GitLab denied access to ${name}.`, {
+        suggestions: [
+          'Check that the token can read the project and has the read_api scope.',
+        ],
+      });
     default:
       return new HunkExtensionUserError(
         `GitLab returned HTTP ${String(status)} for ${name}.`,

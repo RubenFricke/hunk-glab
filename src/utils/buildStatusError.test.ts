@@ -18,4 +18,13 @@ describe('buildStatusError', () => {
       suggestions: ['Refresh GITLAB_TOKEN or GITLAB_ACCESS_TOKEN and retry.'],
     });
   });
+
+  it('explains HTTP 403', () => {
+    expect(buildStatusError(403, NAME)).toMatchObject({
+      message: `GitLab denied access to ${NAME}.`,
+      suggestions: [
+        'Check that the token can read the project and has the read_api scope.',
+      ],
+    });
+  });
 });
