@@ -58,6 +58,24 @@ describe('fetchGitLab', () => {
     );
   });
 
+  it('rejects a token that cannot go in a header, without echoing it', async () => {
+    const { requests, fetch } = recordFetch(() => new Response('diff'));
+
+    const error = await fetchGitLab(
+      options(fetch, undefined, { GITLAB_TOKEN: 'glpat-a\nb' }),
+    ).catch((caught: unknown) => caught);
+
+    expect(error).toMatchObject({
+      message:
+        'The configured GitLab token contains characters that cannot be sent in an HTTP header.',
+      suggestions: [
+        'Set GITLAB_TOKEN or GITLAB_ACCESS_TOKEN to the token value without line breaks.',
+      ],
+    });
+    expect(JSON.stringify(error)).not.toContain('glpat');
+    expect(requests).toEqual([]);
+  });
+
   it('refuses a redirect', async () => {
     const { fetch } = recordFetch(
       () =>

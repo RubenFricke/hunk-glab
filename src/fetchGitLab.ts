@@ -59,7 +59,18 @@ const fetchGitLab = async ({
   /** An empty variable counts as unset, the way `hunk gh` reads its tokens. */
   const token = [env.GITLAB_TOKEN, env.GITLAB_ACCESS_TOKEN].find(Boolean);
   if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
+    try {
+      headers.set('Authorization', `Bearer ${token}`);
+    } catch {
+      throw new HunkExtensionUserError(
+        'The configured GitLab token contains characters that cannot be sent in an HTTP header.',
+        {
+          suggestions: [
+            'Set GITLAB_TOKEN or GITLAB_ACCESS_TOKEN to the token value without line breaks.',
+          ],
+        },
+      );
+    }
   }
 
   let response: Response;
