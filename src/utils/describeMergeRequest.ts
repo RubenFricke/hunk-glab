@@ -1,7 +1,7 @@
 import type { GitLabProject } from './parseGitLabProject.ts';
 
 /** One merge request: a project and the number within it. */
-interface MergeRequestTarget {
+export interface MergeRequestTarget {
   readonly project: GitLabProject;
   readonly iid: number;
 }
