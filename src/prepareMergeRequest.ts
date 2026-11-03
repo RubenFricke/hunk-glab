@@ -5,7 +5,7 @@ import type {
 
 import fetchGitLab, { type GitLabFetch } from './fetchGitLab.ts';
 import fetchMergeRequestMetadata from './fetchMergeRequestMetadata.ts';
-import buildInvocationError from './utils/buildInvocationError.ts';
+import resolveProject, { type ReadOrigin } from './resolveProject.ts';
 import describeMergeRequest from './utils/describeMergeRequest.ts';
 import encodeProject from './utils/encodeProject.ts';
 import parseMergeRequestInvocation from './utils/parseMergeRequestInvocation.ts';
@@ -15,12 +15,13 @@ const MAX_DIFF_BYTES = 64 * 1024 * 1024;
 /** What `hunk glab mr` needs from outside the process. */
 export interface MergeRequestDependencies {
   readonly fetch: GitLabFetch;
+  readonly readOrigin: ReadOrigin;
 }
 
 interface PrepareMergeRequestOptions {
   /** The tokens after `hunk glab mr`. */
   readonly args: readonly string[];
-  readonly ctx: Pick<ExtensionCliCommandContext, 'signal' | 'stderr'>;
+  readonly ctx: Pick<ExtensionCliCommandContext, 'cwd' | 'signal' | 'stderr'>;
   readonly dependencies: MergeRequestDependencies;
 }
 
@@ -47,10 +48,16 @@ const prepareMergeRequest = async ({
   ctx,
   dependencies,
 }: PrepareMergeRequestOptions): Promise<PreparedDiff> => {
-  const { iid, project, patchArgs } = parseMergeRequestInvocation(args);
-  if (project === undefined) {
-    throw buildInvocationError('Pass the project with --repo group/project.');
-  }
+  const invocation = parseMergeRequestInvocation(args);
+  const { iid, patchArgs } = invocation;
+  const project = await resolveProject({
+    ...(invocation.project === undefined
+      ? {}
+      : { project: invocation.project }),
+    cwd: ctx.cwd,
+    signal: ctx.signal,
+    readOrigin: dependencies.readOrigin,
+  });
 
   const target = { project, iid };
   const name = describeMergeRequest(target);

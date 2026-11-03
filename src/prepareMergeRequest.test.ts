@@ -5,6 +5,10 @@ import recordCliContext from '../test/recordCliContext.ts';
 import recordFetch from '../test/recordFetch.ts';
 import respondWithMergeRequest from '../test/respondWithMergeRequest.ts';
 
+/** Fails the test when a command reads origin it should not need. */
+const refuseOrigin = (): Promise<string> =>
+  Promise.reject(new Error('The command must not read origin.'));
+
 const MERGE_REQUEST =
   'https://gitlab.com/api/v4/projects/vbti-products%2Fadam-one%2Fadam-one-app/merge_requests/12';
 
@@ -29,7 +33,7 @@ describe('prepareMergeRequest', () => {
         '4',
       ],
       ctx,
-      dependencies: { fetch },
+      dependencies: { fetch, readOrigin: refuseOrigin },
     });
 
     expect(requests.map(({ url }) => url)).toEqual([
@@ -72,21 +76,59 @@ describe('prepareMergeRequest', () => {
       prepareMergeRequest({
         args,
         ctx: recordCliContext().ctx,
-        dependencies: { fetch: empty.fetch },
+        dependencies: { fetch: empty.fetch, readOrigin: refuseOrigin },
       }),
     ).rejects.toMatchObject({ message: 'GitLab returned an empty diff.' });
     await expect(
       prepareMergeRequest({
         args,
         ctx: recordCliContext().ctx,
-        dependencies: { fetch: big.fetch },
+        dependencies: { fetch: big.fetch, readOrigin: refuseOrigin },
       }),
     ).rejects.toMatchObject({
       message: 'The GitLab diff exceeds the 64 MiB safety limit.',
     });
   });
 
-  it.each([[['1']], [['x', '--repo', 'a/b']]])(
+  it('reads the project from origin without --repo', async () => {
+    const { requests, fetch } = recordFetch(
+      respondWithMergeRequest({ path: 'group/project', iid: 7, diff: 'd' }),
+    );
+
+    const prepared = await prepareMergeRequest({
+      args: ['7'],
+      ctx: recordCliContext().ctx,
+      dependencies: {
+        fetch,
+        readOrigin: () => Promise.resolve('git@gitlab.com:group/project.git'),
+      },
+    });
+
+    expect(requests[0]?.url).toBe(
+      'https://gitlab.com/api/v4/projects/group%2Fproject/merge_requests/7',
+    );
+    expect(prepared.review.repository).toBe('group/project');
+  });
+
+  it('rejects an origin outside gitlab.com before any request', async () => {
+    const { requests, fetch } = recordFetch(() => new Response('diff'));
+
+    await expect(
+      prepareMergeRequest({
+        args: ['7'],
+        ctx: recordCliContext().ctx,
+        dependencies: {
+          fetch,
+          readOrigin: () => Promise.resolve('git@github.com:a/b.git'),
+        },
+      }),
+    ).rejects.toMatchObject({
+      message: 'The local origin is not a supported gitlab.com project.',
+    });
+    expect(requests).toEqual([]);
+  });
+
+  it.each([[['x', '--repo', 'a/b']], [['1', '2']]])(
     'rejects %j before any request',
     async (args) => {
       const { requests, fetch } = recordFetch(() => new Response('diff'));
@@ -95,7 +137,7 @@ describe('prepareMergeRequest', () => {
         prepareMergeRequest({
           args,
           ctx: recordCliContext().ctx,
-          dependencies: { fetch },
+          dependencies: { fetch, readOrigin: refuseOrigin },
         }),
       ).rejects.toMatchObject({ name: 'HunkExtensionUserError' });
       expect(requests).toEqual([]);

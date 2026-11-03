@@ -5,6 +5,7 @@ import type { HunkExtensionAPI } from 'hunkdiff/extension';
 import createGlabCommand from './createGlabCommand.ts';
 import createPatchStore from './createPatchStore.ts';
 import GLAB_CLI_REFERENCE from './glabCliReference.ts';
+import readGitOrigin from './readGitOrigin.ts';
 
 /**
  * Registers `hunk glab` with Hunk.
@@ -16,7 +17,7 @@ const glabExtension = (hunk: HunkExtensionAPI): void => {
   const { name, summary, usage } = GLAB_CLI_REFERENCE;
   hunk.registerCliCommand(
     { name, summary, usage },
-    createGlabCommand({ fetch, patches }),
+    createGlabCommand({ fetch, readOrigin: readGitOrigin, patches }),
   );
   hunk.on('shutdown', patches.cleanup);
 };

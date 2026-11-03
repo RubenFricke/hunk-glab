@@ -7,7 +7,7 @@ export type ReadOrigin = (cwd: string, signal: AbortSignal) => Promise<string>;
 
 interface ResolveProjectOptions {
   /** The project the user named, if any. */
-  readonly project?: GitLabProject;
+  readonly project?: GitLabProject | undefined;
   readonly cwd: string;
   readonly signal: AbortSignal;
   readonly readOrigin: ReadOrigin;

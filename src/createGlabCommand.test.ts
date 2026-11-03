@@ -24,6 +24,10 @@ const respond = respondWithMergeRequest({
 const refuseFetch = (): Promise<Response> =>
   Promise.reject(new Error('The command must not reach the network.'));
 
+/** Fails the test when a command reads origin it should not need. */
+const refuseOrigin = (): Promise<string> =>
+  Promise.reject(new Error('The command must not read origin.'));
+
 describe('createGlabCommand', () => {
   let root = '';
   let patches: PatchStore;
@@ -44,6 +48,7 @@ describe('createGlabCommand', () => {
 
       const result = await createGlabCommand({
         fetch: refuseFetch,
+        readOrigin: refuseOrigin,
         patches,
       })(args, ctx);
 
@@ -57,7 +62,11 @@ describe('createGlabCommand', () => {
     const { stdout, ctx } = recordCliContext();
 
     await expect(
-      createGlabCommand({ fetch: refuseFetch, patches })(['foo', '1'], ctx),
+      createGlabCommand({
+        fetch: refuseFetch,
+        readOrigin: refuseOrigin,
+        patches,
+      })(['foo', '1'], ctx),
     ).rejects.toMatchObject({
       name: 'HunkExtensionUserError',
       message: 'Unknown GitLab command: foo',
@@ -70,7 +79,11 @@ describe('createGlabCommand', () => {
     const { ctx } = recordCliContext();
 
     await expect(
-      createGlabCommand({ fetch: refuseFetch, patches })(['pr', '1'], ctx),
+      createGlabCommand({
+        fetch: refuseFetch,
+        readOrigin: refuseOrigin,
+        patches,
+      })(['pr', '1'], ctx),
     ).rejects.toMatchObject({
       message: 'Unknown GitLab command: pr',
       suggestions: ['GitLab calls these merge requests: run `hunk glab mr`.'],
@@ -81,7 +94,11 @@ describe('createGlabCommand', () => {
     const { ctx } = recordCliContext();
 
     await expect(
-      createGlabCommand({ fetch: refuseFetch, patches })(['\u001b[2Jmr'], ctx),
+      createGlabCommand({
+        fetch: refuseFetch,
+        readOrigin: refuseOrigin,
+        patches,
+      })(['\u001b[2Jmr'], ctx),
     ).rejects.toMatchObject({
       message: 'GitLab command cannot contain control characters.',
     });
@@ -91,10 +108,11 @@ describe('createGlabCommand', () => {
     const { stderr, ctx } = recordCliContext();
     const { fetch } = recordFetch(respond);
 
-    const result = await createGlabCommand({ fetch, patches })(
-      [...MR_ARGS, '--', '--mode', 'unified'],
-      ctx,
-    );
+    const result = await createGlabCommand({
+      fetch,
+      readOrigin: refuseOrigin,
+      patches,
+    })([...MR_ARGS, '--', '--mode', 'unified'], ctx);
 
     expect(result).toMatchObject({
       kind: 'delegate',
@@ -127,7 +145,11 @@ describe('createGlabCommand', () => {
     };
 
     await expect(
-      createGlabCommand({ fetch, patches: abortingPatches })(MR_ARGS, ctx),
+      createGlabCommand({
+        fetch,
+        readOrigin: refuseOrigin,
+        patches: abortingPatches,
+      })(MR_ARGS, ctx),
     ).rejects.toMatchObject({ message: 'GitLab diff loading was cancelled.' });
     expect(await readdir(root)).toEqual([]);
   });
@@ -145,7 +167,10 @@ describe('createGlabCommand', () => {
     const { fetch } = recordFetch(respond);
 
     await expect(
-      createGlabCommand({ fetch, patches })(MR_ARGS, ctx),
+      createGlabCommand({ fetch, readOrigin: refuseOrigin, patches })(
+        MR_ARGS,
+        ctx,
+      ),
     ).rejects.toMatchObject({ message: 'GitLab diff loading was cancelled.' });
     expect(await readdir(root)).toEqual([]);
   });
@@ -159,7 +184,10 @@ describe('createGlabCommand', () => {
     });
 
     await expect(
-      createGlabCommand({ fetch, patches })(MR_ARGS, ctx),
+      createGlabCommand({ fetch, readOrigin: refuseOrigin, patches })(
+        MR_ARGS,
+        ctx,
+      ),
     ).rejects.toMatchObject({ message: 'GitLab diff loading was cancelled.' });
     expect(await readdir(root)).toEqual([]);
   });
@@ -188,7 +216,10 @@ describe('createGlabCommand', () => {
     });
 
     await expect(
-      createGlabCommand({ fetch, patches })(MR_ARGS, ctx),
+      createGlabCommand({ fetch, readOrigin: refuseOrigin, patches })(
+        MR_ARGS,
+        ctx,
+      ),
     ).rejects.toMatchObject({ message: 'GitLab diff loading was cancelled.' });
     expect(await readdir(root)).toEqual([]);
   });
