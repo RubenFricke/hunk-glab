@@ -7,7 +7,9 @@ import prepareMergeRequest, {
 } from './prepareMergeRequest.ts';
 import buildCancelledError from './utils/buildCancelledError.ts';
 import buildUnknownCommandError from './utils/buildUnknownCommandError.ts';
+import hasHelpFlag from './utils/hasHelpFlag.ts';
 import renderGlabHelp from './utils/renderGlabHelp.ts';
+import renderSubcommandHelp from './utils/renderSubcommandHelp.ts';
 
 interface GlabCommandDependencies extends MergeRequestDependencies {
   readonly patches: PatchStore;
@@ -27,18 +29,30 @@ const createGlabCommand = ({
   ...dependencies
 }: GlabCommandDependencies): ExtensionCliCommandHandler => {
   const help = renderGlabHelp(GLAB_CLI_REFERENCE);
+  /** A subcommand is known exactly when the reference describes it. */
+  const subcommandHelp = new Map<string, string>(
+    GLAB_CLI_REFERENCE.subcommands.map((subcommand) => [
+      subcommand.name,
+      renderSubcommandHelp(subcommand, GLAB_CLI_REFERENCE),
+    ]),
+  );
   return async (args, ctx) => {
-    const [command] = args;
+    const [command, ...commandArgs] = args;
     if (command === undefined || command === '--help' || command === '-h') {
       await ctx.stdout.write(help);
       return { kind: 'exit' };
     }
-    if (command !== 'mr') {
+    const commandHelp = subcommandHelp.get(command);
+    if (commandHelp === undefined) {
       throw buildUnknownCommandError(command);
+    }
+    if (hasHelpFlag(commandArgs)) {
+      await ctx.stdout.write(commandHelp);
+      return { kind: 'exit' };
     }
 
     const prepared = await prepareMergeRequest({
-      args: args.slice(1),
+      args: commandArgs,
       ctx,
       dependencies,
     });

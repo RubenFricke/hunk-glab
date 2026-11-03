@@ -11,6 +11,7 @@ import recordCliContext from '../test/recordCliContext.ts';
 import recordFetch from '../test/recordFetch.ts';
 import respondWithMergeRequest from '../test/respondWithMergeRequest.ts';
 import renderGlabHelp from './utils/renderGlabHelp.ts';
+import renderSubcommandHelp from './utils/renderSubcommandHelp.ts';
 
 const DIFF = 'diff --git a/a b/a\n';
 const MR_ARGS = ['mr', '4306', '--repo', 'gitlab-org/cli'];
@@ -58,6 +59,42 @@ describe('createGlabCommand', () => {
       expect(stderr).toEqual([]);
     },
   );
+
+  it.each([
+    [['mr', '--help']],
+    [['mr', '-h']],
+    [['mr', '123', '--repo', 'a/b', '--help', '--', '--mode', 'unified']],
+  ])('prints the mr help for %j without Git or network', async (args) => {
+    const { stdout, stderr, ctx } = recordCliContext();
+    const [mr] = GLAB_CLI_REFERENCE.subcommands;
+    if (mr === undefined) {
+      throw new Error('Expected the mr subcommand.');
+    }
+
+    const result = await createGlabCommand({
+      fetch: refuseFetch,
+      env: {},
+      readOrigin: refuseOrigin,
+      patches,
+    })(args, ctx);
+
+    expect(result).toEqual({ kind: 'exit' });
+    expect(stdout.join('')).toBe(renderSubcommandHelp(mr, GLAB_CLI_REFERENCE));
+    expect(stderr).toEqual([]);
+  });
+
+  it('leaves a --help after -- to hunk patch', async () => {
+    const { ctx } = recordCliContext();
+
+    await expect(
+      createGlabCommand({
+        fetch: refuseFetch,
+        env: {},
+        readOrigin: refuseOrigin,
+        patches,
+      })(['mr', '--', '--help'], ctx),
+    ).rejects.toMatchObject({ message: 'Specify one merge request.' });
+  });
 
   it('names an unknown command and prints nothing', async () => {
     const { stdout, ctx } = recordCliContext();
