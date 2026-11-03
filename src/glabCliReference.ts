@@ -1,5 +1,5 @@
 /** One accepted spelling of a `hunk glab` subcommand. */
-export interface GlabCliForm {
+interface GlabCliForm {
   /** The arguments after `hunk glab <command>`. */
   readonly args: string;
   /** Left out when the form speaks for itself. */
@@ -21,7 +21,7 @@ export interface GlabCliSubcommand {
 }
 
 /** One option every subcommand shares. */
-export interface GlabCliOption {
+interface GlabCliOption {
   readonly flag: string;
   readonly description: string;
 }
