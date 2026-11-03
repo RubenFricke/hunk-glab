@@ -9,7 +9,7 @@ import buildCancelledError from './utils/buildCancelledError.ts';
 import buildUnknownCommandError from './utils/buildUnknownCommandError.ts';
 import renderGlabHelp from './utils/renderGlabHelp.ts';
 
-export interface GlabCommandDependencies extends MergeRequestDependencies {
+interface GlabCommandDependencies extends MergeRequestDependencies {
   readonly patches: PatchStore;
 }
 

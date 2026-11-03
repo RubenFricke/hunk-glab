@@ -21,7 +21,7 @@ interface PrepareMergeRequestOptions {
 }
 
 /** A fetched diff, ready to hand to `hunk patch`. */
-export interface PreparedDiff {
+interface PreparedDiff {
   readonly bytes: Uint8Array;
   readonly filename: string;
   readonly patchArgs: readonly string[];

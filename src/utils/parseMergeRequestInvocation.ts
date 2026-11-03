@@ -9,7 +9,7 @@ const REPO_OPTION = '--repo';
 const REPO_PREFIX = '--repo=';
 
 /** What `hunk glab mr` was asked to open. */
-export interface MergeRequestInvocation {
+interface MergeRequestInvocation {
   readonly iid: number;
   /** Absent when the project comes from the local origin. */
   readonly project?: GitLabProject;
