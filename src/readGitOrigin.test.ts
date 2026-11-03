@@ -74,8 +74,9 @@ describe('readGitOrigin', () => {
   it.skipIf(process.platform === 'win32')(
     'reports a cancel while Git runs as cancelled',
     async () => {
+      /** PATH holds only the fake, so its sleep needs a full path. */
       const fakeGit = join(directory, 'git');
-      await writeFile(fakeGit, '#!/bin/sh\nsleep 5\n');
+      await writeFile(fakeGit, '#!/bin/sh\nexec /bin/sleep 5\n');
       await chmod(fakeGit, 0o755);
       vi.stubEnv('PATH', directory);
       const controller = new AbortController();
