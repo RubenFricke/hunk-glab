@@ -19,14 +19,33 @@ describe('createGlabCommand', () => {
     },
   );
 
-  it('rejects any other argument with a pointer to the help', async () => {
+  it('names an unknown command and prints nothing', async () => {
     const { stdout, ctx } = recordCliContext();
 
-    await expect(createGlabCommand()(['mr'], ctx)).rejects.toMatchObject({
+    await expect(createGlabCommand()(['foo', '1'], ctx)).rejects.toMatchObject({
       name: 'HunkExtensionUserError',
-      message: 'Unknown GitLab command.',
+      message: 'Unknown GitLab command: foo',
       suggestions: ['Run `hunk glab --help` to list available commands.'],
     });
     expect(stdout).toEqual([]);
+  });
+
+  it('points `hunk glab pr` at merge requests', async () => {
+    const { ctx } = recordCliContext();
+
+    await expect(createGlabCommand()(['pr', '1'], ctx)).rejects.toMatchObject({
+      message: 'Unknown GitLab command: pr',
+      suggestions: ['GitLab calls these merge requests: run `hunk glab mr`.'],
+    });
+  });
+
+  it('rejects a command with control characters', async () => {
+    const { ctx } = recordCliContext();
+
+    await expect(
+      createGlabCommand()(['\u001b[2Jmr'], ctx),
+    ).rejects.toMatchObject({
+      message: 'GitLab command cannot contain control characters.',
+    });
   });
 });

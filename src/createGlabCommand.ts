@@ -1,15 +1,14 @@
-import {
-  type ExtensionCliCommandHandler,
-  HunkExtensionUserError,
-} from 'hunkdiff/extension';
+import type { ExtensionCliCommandHandler } from 'hunkdiff/extension';
 
 import GLAB_CLI_REFERENCE from './glabCliReference.ts';
+import buildUnknownCommandError from './utils/buildUnknownCommandError.ts';
 import renderGlabHelp from './utils/renderGlabHelp.ts';
 
 /**
  * Builds the handler behind `hunk glab`.
  *
  * @returns A handler that prints the help, or rejects what it does not know.
+ * @throws {HunkExtensionUserError} For a subcommand `hunk glab` does not have.
  */
 const createGlabCommand = (): ExtensionCliCommandHandler => {
   const help = renderGlabHelp(GLAB_CLI_REFERENCE);
@@ -20,9 +19,7 @@ const createGlabCommand = (): ExtensionCliCommandHandler => {
       return { kind: 'exit' };
     }
 
-    throw new HunkExtensionUserError('Unknown GitLab command.', {
-      suggestions: ['Run `hunk glab --help` to list available commands.'],
-    });
+    throw buildUnknownCommandError(command);
   };
 };
 
