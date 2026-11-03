@@ -1,0 +1,3 @@
+[install]
+# Wait three days before installing a new release of any dependency.
+minimumReleaseAge = 259200

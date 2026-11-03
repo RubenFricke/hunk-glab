@@ -1,0 +1,35 @@
+{
+  "name": "hunk-glab",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Review GitLab merge requests in Hunk from the command line, the way hunk gh reviews GitHub pull requests",
+  "keywords": [
+    "hunk",
+    "hunk-extension",
+    "gitlab",
+    "merge-request",
+    "code-review",
+    "diff"
+  ],
+  "homepage": "https://github.com/RubenFricke/hunk-glab#readme",
+  "bugs": {
+    "url": "https://github.com/RubenFricke/hunk-glab/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RubenFricke/hunk-glab.git"
+  },
+  "license": "MIT",
+  "author": "Ruben Fricke",
+  "type": "module",
+  "hunk": {
+    "apiVersion": 31,
+    "extensions": [
+      "./src/index.ts"
+    ]
+  },
+  "packageManager": "bun@1.4.4",
+  "devDependencies": {
+    "hunkdiff": "0.24.0"
+  }
+}
