@@ -29,12 +29,16 @@
     ]
   },
   "scripts": {
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit"
   },
   "packageManager": "bun@1.4.4",
   "devDependencies": {
     "@types/node": "^26.6.5",
     "hunkdiff": "0.24.0",
+    "prettier": "^3.9.10",
+    "prettier-plugin-jsdoc": "^1.8.1",
     "typescript": "~6.0.3"
   }
 }
