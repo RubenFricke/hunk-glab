@@ -123,4 +123,45 @@ describe('readGitCheckout', () => {
       readGitCheckout(repo, controller.signal),
     ).rejects.toMatchObject({ message: 'GitLab diff loading was cancelled.' });
   });
+
+  describe('with a fake git', () => {
+    /** PATH holds only the fake, so it calls other tools by full path. */
+    const useFakeGit = async (script: string): Promise<void> => {
+      const bin = join(repo, 'bin');
+      execFileSync('mkdir', ['-p', bin]);
+      await writeFile(join(bin, 'git'), `#!/bin/sh\n${script}\n`);
+      await chmod(join(bin, 'git'), 0o755);
+      vi.stubEnv('PATH', bin);
+    };
+
+    it.skipIf(process.platform === 'win32')(
+      'reports a cancel while Git runs as cancelled',
+      async () => {
+        await useFakeGit('exec /bin/sleep 5');
+        const controller = new AbortController();
+        setTimeout(() => {
+          controller.abort();
+        }, 50);
+
+        await expect(
+          readGitCheckout(repo, controller.signal),
+        ).rejects.toMatchObject({
+          message: 'GitLab diff loading was cancelled.',
+        });
+      },
+    );
+
+    it.skipIf(process.platform === 'win32')(
+      'rejects a HEAD that is not a full SHA',
+      async () => {
+        await useFakeGit(
+          'if [ "$1" = symbolic-ref ]; then echo main; else echo abc123; fi',
+        );
+
+        await expect(readGitCheckout(repo, SIGNAL)).rejects.toMatchObject({
+          message: 'Git failed while reading the current HEAD.',
+        });
+      },
+    );
+  });
 });
