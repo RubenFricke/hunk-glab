@@ -12,15 +12,18 @@ describe('renderSubcommandHelp', () => {
 
     expect(renderSubcommandHelp(mr, GLAB_CLI_REFERENCE)).toBe(
       [
-        'Usage: hunk glab mr <merge-request> [--repo <group/project>] [-- <patch-options...>]',
+        'Usage: hunk glab mr [merge-request] [--repo <group/project>] [-- <patch-options...>]',
         '',
         'Review a GitLab merge request without requiring the glab CLI.',
         '',
         'Merge request forms:',
+        '  (omitted)                            find the open merge request for the current branch',
         '  123                                  infer the project from the local origin',
         "  '!123'                               use GitLab's own reference",
         '  123 --repo gitlab-org/cli            use an explicit project',
         '  123 --repo 34675721                  use a numeric project id',
+        "  'gitlab-org/cli!123'                 name the project and merge request",
+        '  https://gitlab.com/gitlab-org/cli/-/merge_requests/123',
         '',
         'Quote `!123`, because shells expand `!` from their history.',
         'Pass Hunk patch options after `--`.',

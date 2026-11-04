@@ -22,6 +22,13 @@ export interface FetchGitLabOptions {
   readonly maxBytes: number;
   readonly tooLargeMessage: string;
   readonly emptyMessage: string;
+  /** Replaces the merge-request wording of a 404, such as for a commit. */
+  readonly notFoundMessage?: string | undefined;
+  /**
+   * Refuses a list with a next page, because a match on that page would be
+   * missed.
+   */
+  readonly nextPageMessage?: string | undefined;
   readonly signal: AbortSignal;
   readonly fetch: GitLabFetch;
   /** `GITLAB_TOKEN`, else `GITLAB_ACCESS_TOKEN`; without one, anonymous. */
@@ -44,6 +51,8 @@ const fetchGitLab = async ({
   maxBytes,
   tooLargeMessage,
   emptyMessage,
+  notFoundMessage,
+  nextPageMessage,
   signal,
   fetch,
   env,
@@ -93,8 +102,19 @@ const fetchGitLab = async ({
       `GitLab redirected the request for ${name}; refusing to forward credentials.`,
     );
   }
+  if (response.status === 404 && notFoundMessage !== undefined) {
+    throw new HunkExtensionUserError(notFoundMessage);
+  }
   if (!response.ok) {
     throw buildStatusError(response.status, name);
+  }
+  const hasNextPage =
+    Boolean(response.headers.get('x-next-page')) ||
+    (response.headers.get('link')?.includes('rel="next"') ?? false);
+  if (nextPageMessage !== undefined && hasNextPage) {
+    throw new HunkExtensionUserError(nextPageMessage, {
+      suggestions: ['Pass the intended merge-request number explicitly.'],
+    });
   }
 
   try {

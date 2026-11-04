@@ -9,6 +9,10 @@ import respondWithMergeRequest from '../test/respondWithMergeRequest.ts';
 const refuseOrigin = (): Promise<string> =>
   Promise.reject(new Error('The command must not read origin.'));
 
+/** Fails the test when a command reads the checkout it should not need. */
+const refuseCheckout = (): Promise<never> =>
+  Promise.reject(new Error('The command must not read the checkout.'));
+
 const MERGE_REQUEST =
   'https://gitlab.com/api/v4/projects/vbti-products%2Fadam-one%2Fadam-one-app/merge_requests/12';
 
@@ -33,7 +37,12 @@ describe('prepareMergeRequest', () => {
         '4',
       ],
       ctx,
-      dependencies: { fetch, env: {}, readOrigin: refuseOrigin },
+      dependencies: {
+        fetch,
+        env: {},
+        readOrigin: refuseOrigin,
+        readCheckout: refuseCheckout,
+      },
     });
 
     expect(requests.map(({ url }) => url)).toEqual([
@@ -76,14 +85,24 @@ describe('prepareMergeRequest', () => {
       prepareMergeRequest({
         args,
         ctx: recordCliContext().ctx,
-        dependencies: { fetch: empty.fetch, env: {}, readOrigin: refuseOrigin },
+        dependencies: {
+          fetch: empty.fetch,
+          env: {},
+          readOrigin: refuseOrigin,
+          readCheckout: refuseCheckout,
+        },
       }),
     ).rejects.toMatchObject({ message: 'GitLab returned an empty diff.' });
     await expect(
       prepareMergeRequest({
         args,
         ctx: recordCliContext().ctx,
-        dependencies: { fetch: big.fetch, env: {}, readOrigin: refuseOrigin },
+        dependencies: {
+          fetch: big.fetch,
+          env: {},
+          readOrigin: refuseOrigin,
+          readCheckout: refuseCheckout,
+        },
       }),
     ).rejects.toMatchObject({
       message: 'The GitLab diff exceeds the 64 MiB safety limit.',
@@ -102,6 +121,7 @@ describe('prepareMergeRequest', () => {
         fetch,
         env: {},
         readOrigin: () => Promise.resolve('git@gitlab.com:group/project.git'),
+        readCheckout: refuseCheckout,
       },
     });
 
@@ -123,6 +143,7 @@ describe('prepareMergeRequest', () => {
           fetch,
           env: {},
           readOrigin: () => Promise.resolve('git@github.com:a/b.git'),
+          readCheckout: refuseCheckout,
         },
       }),
     ).rejects.toMatchObject({
@@ -140,7 +161,12 @@ describe('prepareMergeRequest', () => {
         prepareMergeRequest({
           args,
           ctx: recordCliContext().ctx,
-          dependencies: { fetch, env: {}, readOrigin: refuseOrigin },
+          dependencies: {
+            fetch,
+            env: {},
+            readOrigin: refuseOrigin,
+            readCheckout: refuseCheckout,
+          },
         }),
       ).rejects.toMatchObject({ name: 'HunkExtensionUserError' });
       expect(requests).toEqual([]);
@@ -156,7 +182,12 @@ describe('prepareMergeRequest', () => {
     const prepared = await prepareMergeRequest({
       args: ['4306', '--repo=34675721'],
       ctx,
-      dependencies: { fetch, env: {}, readOrigin: refuseOrigin },
+      dependencies: {
+        fetch,
+        env: {},
+        readOrigin: refuseOrigin,
+        readCheckout: refuseCheckout,
+      },
     });
 
     expect(requests.map(({ url }) => url)).toEqual([
@@ -168,5 +199,77 @@ describe('prepareMergeRequest', () => {
       filename: 'cli-mr-4306.diff',
       review: { repository: 'gitlab-org/cli' },
     });
+  });
+
+  it('finds the open merge request of HEAD without a number', async () => {
+    const sha = 'd7e533ee212a48942cfd8544188bb15f46630f32';
+    const { stderr, ctx } = recordCliContext();
+    const mergeRequest = respondWithMergeRequest({
+      path: 'gitlab-org/cli',
+      iid: 4307,
+      diff: 'd',
+    });
+    const { requests, fetch } = recordFetch((url) =>
+      url.includes('/repository/commits/')
+        ? Response.json([
+            {
+              iid: 4307,
+              state: 'opened',
+              references: { full: 'gitlab-org/cli!4307' },
+            },
+          ])
+        : mergeRequest(url),
+    );
+
+    const prepared = await prepareMergeRequest({
+      args: ['--', '--mode', 'unified'],
+      ctx,
+      dependencies: {
+        fetch,
+        env: {},
+        readOrigin: () => Promise.resolve('git@gitlab.com:gitlab-org/cli.git'),
+        readCheckout: () => Promise.resolve({ branch: 'feature/x', sha }),
+      },
+    });
+
+    expect(requests.map(({ url }) => url)).toEqual([
+      `https://gitlab.com/api/v4/projects/gitlab-org%2Fcli/repository/commits/${sha}/merge_requests?state=opened&per_page=100`,
+      'https://gitlab.com/api/v4/projects/gitlab-org%2Fcli/merge_requests/4307',
+      'https://gitlab.com/api/v4/projects/gitlab-org%2Fcli/merge_requests/4307/raw_diffs',
+    ]);
+    expect(stderr).toEqual([
+      'Fetching GitLab merge request gitlab-org/cli!4307…\n',
+    ]);
+    expect(prepared).toMatchObject({
+      patchArgs: ['--mode', 'unified'],
+      review: { id: '!4307', repository: 'gitlab-org/cli' },
+    });
+  });
+
+  it('searches the project of --repo without reading origin', async () => {
+    const sha = 'd7e533ee212a48942cfd8544188bb15f46630f32';
+    const { requests, fetch } = recordFetch((url) =>
+      url.includes('/repository/commits/')
+        ? Response.json([])
+        : Response.json({ id: 34675721 }),
+    );
+
+    await expect(
+      prepareMergeRequest({
+        args: ['--repo', '34675721'],
+        ctx: recordCliContext().ctx,
+        dependencies: {
+          fetch,
+          env: {},
+          readOrigin: refuseOrigin,
+          readCheckout: () => Promise.resolve({ branch: 'main', sha }),
+        },
+      }),
+    ).rejects.toMatchObject({
+      message: `No accessible open merge request matches 34675721:main@${sha.slice(0, 12)}.`,
+    });
+    expect(requests[0]?.url).toContain(
+      '/projects/34675721/repository/commits/',
+    );
   });
 });

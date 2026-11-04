@@ -5,6 +5,7 @@ import {
 
 import type { MergeRequestTarget } from './describeMergeRequest.ts';
 import hasControlCharacter from './hasControlCharacter.ts';
+import isRecord from './isRecord.ts';
 import parseGitLabProject, {
   type GitLabProject,
 } from './parseGitLabProject.ts';
@@ -45,8 +46,6 @@ const parseMergeRequestMetadata = (
     );
   const isKnownState = (state: unknown): state is keyof typeof SHOWN_STATES =>
     typeof state === 'string' && Object.hasOwn(SHOWN_STATES, state);
-  const isRecord = (field: unknown): field is Record<string, unknown> =>
-    typeof field === 'object' && field !== null && !Array.isArray(field);
   const readString = (
     container: unknown,
     field: string,

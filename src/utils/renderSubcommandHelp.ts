@@ -24,7 +24,7 @@ const renderSubcommandHelp = (
     '',
     `${subcommand.formsHeading}:`,
     ...subcommand.forms.map(({ args, description }) =>
-      formatHelpRow(args, description),
+      formatHelpRow(args || '(omitted)', description),
     ),
     ...(subcommand.notes ? ['', ...subcommand.notes] : []),
     '',

@@ -1,7 +1,4 @@
-import {
-  type ExtensionChangeRequestReviewDescriptor,
-  HunkExtensionUserError,
-} from 'hunkdiff/extension';
+import type { ExtensionChangeRequestReviewDescriptor } from 'hunkdiff/extension';
 
 import fetchGitLab, {
   type GitLabEnv,
@@ -11,6 +8,7 @@ import describeMergeRequest, {
   type MergeRequestTarget,
 } from './utils/describeMergeRequest.ts';
 import encodeProject from './utils/encodeProject.ts';
+import parseJsonBody from './utils/parseJsonBody.ts';
 import parseMergeRequestMetadata from './utils/parseMergeRequestMetadata.ts';
 
 const MAX_METADATA_BYTES = 1024 * 1024;
@@ -49,17 +47,10 @@ const fetchMergeRequestMetadata = async ({
     env,
   });
 
-  let metadata: unknown;
-  try {
-    metadata = JSON.parse(
-      new TextDecoder('utf-8', { fatal: true }).decode(bytes),
-    );
-  } catch {
-    throw new HunkExtensionUserError(
-      'GitLab returned malformed merge-request metadata.',
-    );
-  }
-  return parseMergeRequestMetadata(metadata, target);
+  return parseMergeRequestMetadata(
+    parseJsonBody(bytes, 'GitLab returned malformed merge-request metadata.'),
+    target,
+  );
 };
 
 export default fetchMergeRequestMetadata;
