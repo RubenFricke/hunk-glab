@@ -1,0 +1,84 @@
+name: Release
+
+# One click releases the head of main: the job raises the version in
+# package.json, commits that, tags the commit and publishes a GitHub release.
+# Hunk installs the tagged source and reads the version from it, so the bump
+# has to land before the tag.
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: The part of the version to raise
+        type: choice
+        default: patch
+        options: [patch, minor, major]
+      dry_run:
+        description: Only show the release this would make
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+# Two releases at once would race for the same version.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      BUMP: ${{ inputs.bump }}
+      DRY_RUN: ${{ inputs.dry_run }}
+    steps:
+      - name: Refuse to release any branch but main
+        if: ${{ !inputs.dry_run && github.ref != 'refs/heads/main' }}
+        run: |
+          echo "Releases come from main, not from $GITHUB_REF_NAME." >&2
+          exit 1
+      # Keeps the token in the checkout, because the job pushes to main.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the plan needs every tag
+      # Installs the Bun and Node.js versions in mise.toml.
+      - uses: jdx/mise-action@82a612c5ab8bcda7cc5db6b7e81a8e7584c3dc6e # v5.2.3
+      - run: bun install --frozen-lockfile
+      - run: bun run check
+      - name: Plan the release
+        id: plan
+        run: |
+          notes=(--notes "$RUNNER_TEMP/requirements.md")
+          if [ "$DRY_RUN" = true ]; then
+            bun run scripts/release.ts --bump "$BUMP" --dry-run "${notes[@]}"
+          else
+            bun run scripts/release.ts --bump "$BUMP" "${notes[@]}"
+          fi
+      - name: Commit, tag and push
+        if: ${{ !inputs.dry_run }}
+        env:
+          TAG: ${{ steps.plan.outputs.tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json
+          git commit -m "chore(release): $TAG"
+          git tag -a "$TAG" -m "hunk-glab $TAG"
+          # All or nothing: a commit that landed on main meanwhile rejects both.
+          git push --atomic origin HEAD:main "$TAG"
+      - name: Publish the release
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.plan.outputs.tag }}
+          PREVIOUS_TAG: ${{ steps.plan.outputs.previous_tag }}
+        run: |
+          start=()
+          if [ -n "$PREVIOUS_TAG" ]; then
+            start=(--notes-start-tag "$PREVIOUS_TAG")
+          fi
+          # The Hunk this release needs goes above the generated list.
+          gh release create "$TAG" --verify-tag --title "$TAG" \
+            --notes-file "$RUNNER_TEMP/requirements.md" --generate-notes "${start[@]}"
