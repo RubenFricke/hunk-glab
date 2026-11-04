@@ -3,7 +3,7 @@ import buildInvocationError from './buildInvocationError.ts';
 import parseGitLabProject, {
   type GitLabProject,
 } from './parseGitLabProject.ts';
-import parseMergeRequestIid from './parseMergeRequestIid.ts';
+import parseMergeRequestLocator from './parseMergeRequestLocator.ts';
 
 const REPO_OPTION = '--repo';
 const REPO_PREFIX = '--repo=';
@@ -68,9 +68,18 @@ const parseMergeRequestInvocation = (
   if (target === undefined) {
     throw buildInvocationError('Specify one merge request.');
   }
+  const locator = parseMergeRequestLocator(target);
+  if (repo !== undefined && locator.project !== undefined) {
+    throw buildInvocationError(
+      'Do not combine --repo with a locator that already names a project.',
+    );
+  }
+  const project =
+    locator.project ??
+    (repo === undefined ? undefined : parseGitLabProject(repo));
   return {
-    iid: parseMergeRequestIid(target),
-    ...(repo === undefined ? {} : { project: parseGitLabProject(repo) }),
+    iid: locator.iid,
+    ...(project === undefined ? {} : { project }),
     patchArgs: Object.freeze([...patchArgs]),
   };
 };

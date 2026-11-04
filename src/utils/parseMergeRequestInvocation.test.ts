@@ -24,6 +24,29 @@ describe('parseMergeRequestInvocation', () => {
     });
   });
 
+  it.each([
+    [['gitlab-org/cli!123']],
+    [['https://gitlab.com/gitlab-org/cli/-/merge_requests/123']],
+  ])('reads the project from the locator %j', (args) => {
+    expect(parseMergeRequestInvocation(args)).toEqual({
+      iid: 123,
+      project: GITLAB_CLI,
+      patchArgs: [],
+    });
+  });
+
+  it.each([
+    [['gitlab-org/cli!1', '--repo', 'a/b']],
+    [['--repo=a/b', 'https://gitlab.com/gitlab-org/cli/-/merge_requests/1']],
+  ])('rejects --repo next to a locator that names a project: %j', (args) => {
+    expect(() => parseMergeRequestInvocation(args)).toThrow(
+      expect.objectContaining({
+        message:
+          'Do not combine --repo with a locator that already names a project.',
+      }),
+    );
+  });
+
   it('passes every token after the first -- to hunk patch untouched', () => {
     expect(
       parseMergeRequestInvocation([
