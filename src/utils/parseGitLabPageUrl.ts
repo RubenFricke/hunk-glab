@@ -1,7 +1,7 @@
 import parseGitLabProject from './parseGitLabProject.ts';
 
 /** The page kinds whose links GitLab sends in its metadata. */
-type GitLabPageSection = 'merge_requests' | 'commit';
+type GitLabPageSection = 'merge_requests' | 'commit' | 'compare';
 
 /** The project path and the page reference of one gitlab.com page link. */
 interface GitLabPage {
