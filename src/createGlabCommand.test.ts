@@ -353,4 +353,43 @@ describe('createGlabCommand', () => {
     });
     expect(stderr[0]).toBe('Fetching GitLab commit gitlab-org/cli@d7e533e…\n');
   });
+
+  it('hands a fetched comparison to hunk patch with its header', async () => {
+    const { ctx } = recordCliContext();
+    const { fetch } = recordFetch(() =>
+      Response.json({
+        commits: [],
+        diffs: [
+          {
+            old_path: 'a.txt',
+            new_path: 'a.txt',
+            a_mode: '100644',
+            b_mode: '100644',
+            new_file: false,
+            renamed_file: false,
+            deleted_file: false,
+            collapsed: false,
+            too_large: false,
+            diff: '@@ -1 +1 @@\n-a\n+b\n',
+          },
+        ],
+        compare_timeout: false,
+        compare_same_ref: false,
+        web_url: 'https://gitlab.com/gitlab-org/cli/-/compare/a...b',
+      }),
+    );
+
+    const result = await createGlabCommand({
+      fetch,
+      env: {},
+      readOrigin: refuseOrigin,
+      readCheckout: refuseCheckout,
+      patches,
+    })(['compare', 'main...feature', '--repo', 'gitlab-org/cli'], ctx);
+
+    expect(result).toMatchObject({
+      kind: 'delegate',
+      review: { kind: 'comparison', base: 'main', head: 'feature' },
+    });
+  });
 });

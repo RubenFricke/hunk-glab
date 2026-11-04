@@ -5,6 +5,7 @@ import GLAB_CLI_REFERENCE, {
   type GlabCliSubcommand,
 } from './glabCliReference.ts';
 import prepareCommit from './prepareCommit.ts';
+import prepareCompare from './prepareCompare.ts';
 import prepareMergeRequest, {
   type MergeRequestDependencies,
   type PreparedDiff,
@@ -24,6 +25,7 @@ interface GlabCommandDependencies extends MergeRequestDependencies {
 const PREPARE_DIFF = {
   mr: prepareMergeRequest,
   commit: prepareCommit,
+  compare: prepareCompare,
 } as const satisfies Record<
   GlabCliSubcommand['name'],
   (options: PrepareDiffOptions) => Promise<PreparedDiff>

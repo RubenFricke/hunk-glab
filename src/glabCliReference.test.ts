@@ -37,6 +37,7 @@ describe('GLAB_CLI_REFERENCE', () => {
     expect(GLAB_CLI_REFERENCE.subcommands.map(({ name }) => name)).toEqual([
       'mr',
       'commit',
+      'compare',
     ]);
     expect(mr?.name).toBe('mr');
     expect(mr?.forms.map(({ args }) => args)).toEqual([

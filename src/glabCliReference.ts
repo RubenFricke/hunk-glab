@@ -8,7 +8,7 @@ interface GlabCliForm {
 
 /** One `hunk glab` subcommand. */
 export interface GlabCliSubcommand {
-  readonly name: 'mr' | 'commit';
+  readonly name: 'mr' | 'commit' | 'compare';
   /** The positional arguments between the name and the shared options. */
   readonly arguments: string;
   /** One line in the `hunk glab --help` overview. */
@@ -120,6 +120,22 @@ const GLAB_CLI_REFERENCE: GlabCliReference = {
           description: 'use an explicit project',
         },
       ],
+    },
+    {
+      name: 'compare',
+      arguments: '<base>...<head>',
+      summary: 'Review the changes between two GitLab refs.',
+      description:
+        'Review the changes between two GitLab branches, tags, or commits.',
+      formsHeading: 'Compare forms',
+      forms: [
+        {
+          args: 'main...feature',
+          description: 'infer the project from the local origin',
+        },
+        { args: 'v1.126.0...v1.127.0 --repo gitlab-org/cli' },
+      ],
+      notes: ['Use three dots exactly. Pass Hunk patch options after `--`.'],
     },
   ],
 };
