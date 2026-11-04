@@ -150,6 +150,16 @@ describe('buildPatch', () => {
     );
   });
 
+  it('attaches the suggestion for a full diff to a left-out file', () => {
+    expect(() =>
+      buildPatch([file({ collapsed: true })], 'Run `hunk show abc` instead.'),
+    ).toThrow(
+      expect.objectContaining({
+        suggestions: ['Run `hunk show abc` instead.'],
+      }),
+    );
+  });
+
   it.each([
     ['not a list', {}],
     ['an entry that is not an object', [null]],

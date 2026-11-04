@@ -17,11 +17,13 @@ const BINARY_DIFF = /^Binary files .* differ\n?$/;
  * unchanged.
  *
  * @param value - The parsed JSON list of file diffs.
+ * @param incompleteSuggestion - Where to get the full diff when GitLab left a
+ *   file out.
  * @returns The patch, or an empty string for no files.
  * @throws {HunkExtensionUserError} When the list is malformed or GitLab left
  *   out the diff of a file.
  */
-const buildPatch = (value: unknown): string => {
+const buildPatch = (value: unknown, incompleteSuggestion?: string): string => {
   const malformed = (): HunkExtensionUserError =>
     new HunkExtensionUserError(MALFORMED);
   if (!Array.isArray(value)) {
@@ -69,6 +71,10 @@ const buildPatch = (value: unknown): string => {
       if (isCollapsed || isTooLarge) {
         throw new HunkExtensionUserError(
           `GitLab left out the diff of ${newName}, so the review would be incomplete.`,
+          {
+            suggestions:
+              incompleteSuggestion === undefined ? [] : [incompleteSuggestion],
+          },
         );
       }
 
