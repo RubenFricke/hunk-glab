@@ -90,6 +90,39 @@ describe('fetchGitLab', () => {
     });
   });
 
+  it.each([
+    ['x-next-page', { 'x-next-page': '2' }],
+    [
+      'a next link',
+      { link: '<https://gitlab.com/api/v4/x?page=2>; rel="next"' },
+    ],
+  ])('refuses a list with a next page in %s', async (_name, headers) => {
+    const { fetch } = recordFetch(() => new Response('[]', { headers }));
+
+    await expect(
+      fetchGitLab({ ...options(fetch), nextPageMessage: 'More pages.' }),
+    ).rejects.toMatchObject({
+      message: 'More pages.',
+      suggestions: ['Pass the intended merge-request number explicitly.'],
+    });
+  });
+
+  it('accepts a list whose next page is empty', async () => {
+    const { fetch } = recordFetch(
+      () =>
+        new Response('[]', {
+          headers: {
+            'x-next-page': '',
+            link: '<https://gitlab.com/api/v4/x?page=1>; rel="first"',
+          },
+        }),
+    );
+
+    expect(
+      await fetchGitLab({ ...options(fetch), nextPageMessage: 'More pages.' }),
+    ).toHaveLength(2);
+  });
+
   it('refuses a redirect', async () => {
     const { fetch } = recordFetch(
       () =>
