@@ -101,11 +101,16 @@ describe('parseComparison', () => {
 
   it('refuses a comparison that timed out', () => {
     expect(() =>
-      parseComparison(comparison({ compare_timeout: true }), TARGET),
+      parseComparison(
+        comparison({ compare_timeout: true }),
+        TARGET,
+        'Run it locally.',
+      ),
     ).toThrow(
       expect.objectContaining({
         message:
           'GitLab timed out comparing v1.126.0...v1.127.0, so the diff may be incomplete.',
+        suggestions: ['Run it locally.'],
       }),
     );
   });

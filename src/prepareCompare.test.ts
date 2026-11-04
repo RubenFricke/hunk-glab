@@ -20,14 +20,16 @@ const FILE = {
   diff: '@@ -1 +1 @@\n-a\n+b\n',
 };
 
-const comparison = (diffs: unknown[]) => () =>
-  Response.json({
-    commits: [],
-    diffs,
-    compare_timeout: false,
-    compare_same_ref: false,
-    web_url: 'https://gitlab.com/gitlab-org/cli/-/compare/a...b',
-  });
+const comparison =
+  (diffs: unknown[], isTimedOut = false) =>
+  () =>
+    Response.json({
+      commits: [],
+      diffs,
+      compare_timeout: isTimedOut,
+      compare_same_ref: false,
+      web_url: 'https://gitlab.com/gitlab-org/cli/-/compare/a...b',
+    });
 
 const prepare = (args: string[], respond: () => Response) => {
   const recorded = recordFetch(respond);
@@ -88,6 +90,22 @@ describe('prepareCompare', () => {
     ).rejects.toMatchObject({
       message:
         'The GitLab diff of gitlab-org/cli:a...b has 1,000 or more files, so it may be incomplete.',
+      suggestions: [
+        'Run `hunk diff a...b` in a checkout that has both refs, for the full diff.',
+      ],
+    });
+  });
+
+  it.each([
+    ['a collapsed file', comparison([{ ...FILE, collapsed: true, diff: '' }])],
+    ['a timeout', comparison([FILE], true)],
+  ])('points %s at a local review', async (_name, respond) => {
+    await expect(
+      prepare(['v1.126.0...v1.127.0'], respond).result,
+    ).rejects.toMatchObject({
+      suggestions: [
+        'Run `hunk diff v1.126.0...v1.127.0` in a checkout that has both refs, for the full diff.',
+      ],
     });
   });
 

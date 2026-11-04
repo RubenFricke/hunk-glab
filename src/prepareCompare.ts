@@ -42,6 +42,8 @@ const prepareCompare = async ({
     readOrigin: dependencies.readOrigin,
   });
   const name = `${describeProject(project)}:${base}...${head}`;
+  /** Hunk compares local refs through Git, which leaves nothing out. */
+  const fullDiff = `Run \`hunk diff ${base}...${head}\` in a checkout that has both refs, for the full diff.`;
   await ctx.stderr.write(`Fetching GitLab comparison ${name}…\n`);
 
   const bytes = await fetchGitLab({
@@ -59,13 +61,15 @@ const prepareCompare = async ({
   const { files, review, projectPath } = parseComparison(
     parseJsonBody(bytes, 'GitLab returned a malformed comparison.'),
     { project, base, head },
+    fullDiff,
   );
   if (files.length >= MAX_FILES) {
     throw new HunkExtensionUserError(
       `The GitLab diff of ${name} has 1,000 or more files, so it may be incomplete.`,
+      { suggestions: [fullDiff] },
     );
   }
-  const patch = new TextEncoder().encode(buildPatch(files));
+  const patch = new TextEncoder().encode(buildPatch(files, fullDiff));
   if (patch.byteLength === 0) {
     throw new HunkExtensionUserError(
       `GitLab found no changes between ${base} and ${head}.`,

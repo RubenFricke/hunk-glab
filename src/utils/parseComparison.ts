@@ -43,6 +43,8 @@ interface Comparison {
  *
  * @param value - The parsed JSON from GitLab.
  * @param target - The comparison that was asked for.
+ * @param incompleteSuggestion - Where to get the full diff when GitLab cut the
+ *   comparison short.
  * @returns The file diffs, the header and the project path.
  * @throws {HunkExtensionUserError} When the comparison timed out or is
  *   malformed.
@@ -50,6 +52,7 @@ interface Comparison {
 const parseComparison = (
   value: unknown,
   target: ComparisonTarget,
+  incompleteSuggestion?: string,
 ): Comparison => {
   const malformed = (): HunkExtensionUserError =>
     new HunkExtensionUserError('GitLab returned a malformed comparison.');
@@ -74,6 +77,10 @@ const parseComparison = (
   if (isTimedOut) {
     throw new HunkExtensionUserError(
       `GitLab timed out comparing ${range}, so the diff may be incomplete.`,
+      {
+        suggestions:
+          incompleteSuggestion === undefined ? [] : [incompleteSuggestion],
+      },
     );
   }
 
