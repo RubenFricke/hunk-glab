@@ -1,6 +1,7 @@
 import { HunkExtensionUserError } from 'hunkdiff/extension';
 
 import type { MergeRequestTarget } from './describeMergeRequest.ts';
+import isRecord from './isRecord.ts';
 import parseMergeRequestLocator from './parseMergeRequestLocator.ts';
 
 /**
@@ -22,14 +23,11 @@ const parseMergeRequestMatches = (value: unknown): MergeRequestTarget[] => {
   }
 
   return value.map((entry: unknown): MergeRequestTarget => {
-    if (typeof entry !== 'object' || entry === null) {
+    if (!isRecord(entry)) {
       throw malformed();
     }
-    const { iid, references } = entry as Record<string, unknown>;
-    const full =
-      typeof references === 'object' && references !== null
-        ? (references as Record<string, unknown>).full
-        : undefined;
+    const { iid, references } = entry;
+    const full = isRecord(references) ? references.full : undefined;
     if (
       typeof iid !== 'number' ||
       !Number.isSafeInteger(iid) ||
@@ -38,7 +36,7 @@ const parseMergeRequestMatches = (value: unknown): MergeRequestTarget[] => {
     ) {
       throw malformed();
     }
-    let locator;
+    let locator: ReturnType<typeof parseMergeRequestLocator>;
     try {
       locator = parseMergeRequestLocator(full);
     } catch {
