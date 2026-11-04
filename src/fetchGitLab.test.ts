@@ -170,7 +170,7 @@ describe('fetchGitLab', () => {
     });
 
     await expect(fetchGitLab(options(fetch))).rejects.toMatchObject({
-      message: 'GitLab could not be reached while loading the merge request.',
+      message: `GitLab could not be reached while loading ${NAME}.`,
       suggestions: ['Check network access and retry.'],
     });
   });
@@ -188,7 +188,7 @@ describe('fetchGitLab', () => {
     );
 
     await expect(fetchGitLab(options(fetch))).rejects.toMatchObject({
-      message: 'GitLab could not be reached while loading the merge request.',
+      message: `GitLab could not be reached while loading ${NAME}.`,
     });
   });
 

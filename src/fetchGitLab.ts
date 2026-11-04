@@ -61,7 +61,7 @@ const fetchGitLab = async ({
     signal.aborted
       ? buildCancelledError()
       : new HunkExtensionUserError(
-          'GitLab could not be reached while loading the merge request.',
+          `GitLab could not be reached while loading ${name}.`,
           { suggestions: ['Check network access and retry.'] },
         );
 

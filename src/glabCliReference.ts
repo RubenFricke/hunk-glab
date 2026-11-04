@@ -8,7 +8,7 @@ interface GlabCliForm {
 
 /** One `hunk glab` subcommand. */
 export interface GlabCliSubcommand {
-  readonly name: 'mr';
+  readonly name: 'mr' | 'commit' | 'compare';
   /** The positional arguments between the name and the shared options. */
   readonly arguments: string;
   /** One line in the `hunk glab --help` overview. */
@@ -51,10 +51,10 @@ export interface GlabCliReference {
  */
 const GLAB_CLI_REFERENCE: GlabCliReference = {
   name: 'glab',
-  summary: 'Review GitLab merge requests',
-  usage: 'mr [merge-request] [--repo <group/project>]',
+  summary: 'Review GitLab merge requests, commits, and comparisons',
+  usage: '<mr|commit|compare> <target> [--repo <group/project>]',
   description:
-    'Review GitLab merge requests in Hunk without requiring the glab CLI.',
+    'Review GitLab merge requests, commits, and comparisons in Hunk without requiring the glab CLI.',
   options: [
     {
       flag: '--repo <group/project>',
@@ -103,6 +103,44 @@ const GLAB_CLI_REFERENCE: GlabCliReference = {
         'Quote `!123`, because shells expand `!` from their history.',
         'Pass Hunk patch options after `--`.',
       ],
+    },
+    {
+      name: 'commit',
+      arguments: '<commit>',
+      summary: 'Review a GitLab commit without requiring the glab CLI.',
+      description: 'Review a GitLab commit without requiring the glab CLI.',
+      formsHeading: 'Commit forms',
+      forms: [
+        {
+          args: 'abcdef1',
+          description: 'infer the project from the local origin',
+        },
+        {
+          args: 'abcdef1 --repo gitlab-org/cli',
+          description: 'use an explicit project',
+        },
+        {
+          args: 'gitlab-org/cli@abcdef1',
+          description: 'name the project and commit',
+        },
+        { args: 'https://gitlab.com/gitlab-org/cli/-/commit/abcdef1' },
+      ],
+    },
+    {
+      name: 'compare',
+      arguments: '<base>...<head>',
+      summary: 'Review the changes between two GitLab refs.',
+      description:
+        'Review the changes between two GitLab branches, tags, or commits.',
+      formsHeading: 'Compare forms',
+      forms: [
+        {
+          args: 'main...feature',
+          description: 'infer the project from the local origin',
+        },
+        { args: 'v1.126.0...v1.127.0 --repo gitlab-org/cli' },
+      ],
+      notes: ['Use three dots exactly. Pass Hunk patch options after `--`.'],
     },
   ],
 };

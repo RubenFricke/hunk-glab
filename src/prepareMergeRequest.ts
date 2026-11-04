@@ -1,6 +1,6 @@
 import type {
-  ExtensionChangeRequestReviewDescriptor,
   ExtensionCliCommandContext,
+  ExtensionReviewDescriptor,
 } from 'hunkdiff/extension';
 
 import fetchGitLab, {
@@ -28,7 +28,8 @@ export interface MergeRequestDependencies {
   ) => Promise<GitCheckout>;
 }
 
-interface PrepareMergeRequestOptions {
+/** What every `hunk glab` subcommand gets to prepare its diff. */
+export interface PrepareDiffOptions {
   /** The tokens after `hunk glab mr`. */
   readonly args: readonly string[];
   readonly ctx: Pick<ExtensionCliCommandContext, 'cwd' | 'signal' | 'stderr'>;
@@ -36,12 +37,12 @@ interface PrepareMergeRequestOptions {
 }
 
 /** A fetched diff, ready to hand to `hunk patch`. */
-interface PreparedDiff {
+export interface PreparedDiff {
   readonly bytes: Uint8Array;
   readonly filename: string;
   readonly patchArgs: readonly string[];
-  /** The header Hunk shows above the review. */
-  readonly review: ExtensionChangeRequestReviewDescriptor;
+  /** The header Hunk shows above the review, when one fits. */
+  readonly review?: ExtensionReviewDescriptor;
 }
 
 /**
@@ -57,7 +58,7 @@ const prepareMergeRequest = async ({
   args,
   ctx,
   dependencies,
-}: PrepareMergeRequestOptions): Promise<PreparedDiff> => {
+}: PrepareDiffOptions): Promise<PreparedDiff> => {
   const invocation = parseMergeRequestInvocation(args);
   const { patchArgs } = invocation;
   const project = await resolveProject({

@@ -13,10 +13,10 @@ describe('GLAB_CLI_REFERENCE', () => {
 
   it('describes the command for discovery and help', () => {
     expect(GLAB_CLI_REFERENCE).toMatchObject({
-      summary: 'Review GitLab merge requests',
-      usage: 'mr [merge-request] [--repo <group/project>]',
+      summary: 'Review GitLab merge requests, commits, and comparisons',
+      usage: '<mr|commit|compare> <target> [--repo <group/project>]',
       description:
-        'Review GitLab merge requests in Hunk without requiring the glab CLI.',
+        'Review GitLab merge requests, commits, and comparisons in Hunk without requiring the glab CLI.',
     });
   });
 
@@ -34,7 +34,11 @@ describe('GLAB_CLI_REFERENCE', () => {
   it('describes hunk glab mr with its forms', () => {
     const [mr] = GLAB_CLI_REFERENCE.subcommands;
 
-    expect(GLAB_CLI_REFERENCE.subcommands).toHaveLength(1);
+    expect(GLAB_CLI_REFERENCE.subcommands.map(({ name }) => name)).toEqual([
+      'mr',
+      'commit',
+      'compare',
+    ]);
     expect(mr?.name).toBe('mr');
     expect(mr?.forms.map(({ args }) => args)).toEqual([
       '',
@@ -44,6 +48,19 @@ describe('GLAB_CLI_REFERENCE', () => {
       '123 --repo 34675721',
       "'gitlab-org/cli!123'",
       'https://gitlab.com/gitlab-org/cli/-/merge_requests/123',
+    ]);
+  });
+
+  it('describes hunk glab commit with every form it accepts', () => {
+    const commit = GLAB_CLI_REFERENCE.subcommands.find(
+      ({ name }) => name === 'commit',
+    );
+
+    expect(commit?.forms.map(({ args }) => args)).toEqual([
+      'abcdef1',
+      'abcdef1 --repo gitlab-org/cli',
+      'gitlab-org/cli@abcdef1',
+      'https://gitlab.com/gitlab-org/cli/-/commit/abcdef1',
     ]);
   });
 });

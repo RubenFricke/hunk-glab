@@ -115,19 +115,19 @@ describe('hunk-glab in Hunk', () => {
     HUNK_TIMEOUT_MS * 2,
   );
 
-  it(
-    'prints the help of hunk glab mr in the pinned Hunk',
-    async () => {
-      const [mr] = GLAB_CLI_REFERENCE.subcommands;
-      if (mr === undefined) {
-        throw new Error('Expected the mr subcommand.');
-      }
-
-      const run = await runGlab(workDir, PACKAGE_ROOT, ['mr', '--help']);
+  it.each(
+    GLAB_CLI_REFERENCE.subcommands.map((subcommand) => [
+      subcommand.name,
+      subcommand,
+    ]),
+  )(
+    'prints the help of hunk glab %s in the pinned Hunk',
+    async (name, subcommand) => {
+      const run = await runGlab(workDir, PACKAGE_ROOT, [name, '--help']);
 
       expect(run).toEqual({
         code: 0,
-        stdout: renderSubcommandHelp(mr, GLAB_CLI_REFERENCE),
+        stdout: renderSubcommandHelp(subcommand, GLAB_CLI_REFERENCE),
         stderr: '',
       });
     },

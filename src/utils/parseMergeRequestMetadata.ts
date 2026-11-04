@@ -4,16 +4,13 @@ import {
 } from 'hunkdiff/extension';
 
 import type { MergeRequestTarget } from './describeMergeRequest.ts';
-import hasControlCharacter from './hasControlCharacter.ts';
 import isRecord from './isRecord.ts';
-import parseGitLabProject, {
-  type GitLabProject,
-} from './parseGitLabProject.ts';
+import parseGitLabPageUrl from './parseGitLabPageUrl.ts';
+import readBoundedString from './readBoundedString.ts';
 
 const MAX_TITLE_BYTES = 2 * 1024;
 const MAX_URL_BYTES = 2 * 1024;
 const MAX_NAME_BYTES = 512;
-const MERGE_REQUEST_PAGE = /^\/(.+)\/-\/merge_requests\/(\d+)$/;
 
 type ShownState = NonNullable<ExtensionChangeRequestReviewDescriptor['state']>;
 
@@ -51,13 +48,8 @@ const parseMergeRequestMetadata = (
     field: string,
     maxBytes: number,
   ): string => {
-    const text = isRecord(container) ? container[field] : undefined;
-    if (
-      typeof text !== 'string' ||
-      text.length === 0 ||
-      hasControlCharacter(text) ||
-      new TextEncoder().encode(text).byteLength > maxBytes
-    ) {
+    const text = readBoundedString(container, field, maxBytes);
+    if (text === undefined) {
       throw malformed();
     }
     return text;
@@ -79,37 +71,11 @@ const parseMergeRequestMetadata = (
     throw malformed();
   }
 
-  let url: URL;
-  try {
-    url = new URL(pageUrl);
-  } catch {
-    throw malformed();
-  }
+  const page = parseGitLabPageUrl(pageUrl, 'merge_requests');
   if (
-    url.protocol !== 'https:' ||
-    url.hostname !== 'gitlab.com' ||
-    url.port ||
-    url.username ||
-    url.password ||
-    url.search ||
-    url.hash
-  ) {
-    throw malformed();
-  }
-  const page = MERGE_REQUEST_PAGE.exec(url.pathname);
-  if (page?.[1] === undefined || page[2] !== String(target.iid)) {
-    throw malformed();
-  }
-  let pageProject: GitLabProject;
-  try {
-    pageProject = parseGitLabProject(page[1]);
-  } catch {
-    throw malformed();
-  }
-  if (
-    pageProject.kind !== 'path' ||
+    page?.ref !== String(target.iid) ||
     (target.project.kind === 'path' &&
-      pageProject.path.toLowerCase() !== target.project.path.toLowerCase())
+      page.path.toLowerCase() !== target.project.path.toLowerCase())
   ) {
     throw malformed();
   }
@@ -121,7 +87,7 @@ const parseMergeRequestMetadata = (
     url: pageUrl,
     id: `!${String(target.iid)}`,
     repository:
-      target.project.kind === 'path' ? target.project.path : pageProject.path,
+      target.project.kind === 'path' ? target.project.path : page.path,
     author,
     base,
     head,
