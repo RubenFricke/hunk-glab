@@ -5,6 +5,23 @@ import parseMergeRequestInvocation from './parseMergeRequestInvocation.ts';
 const GITLAB_CLI = { kind: 'path', path: 'gitlab-org/cli' } as const;
 
 describe('parseMergeRequestInvocation', () => {
+  it.each([[[]], [['--', '--mode', 'unified']]])(
+    'reads no merge request from %j, so it is found from HEAD',
+    (args) => {
+      expect(parseMergeRequestInvocation(args)).toMatchObject({
+        patchArgs: args.slice(1),
+      });
+      expect(parseMergeRequestInvocation(args)).not.toHaveProperty('iid');
+    },
+  );
+
+  it('keeps --repo without a number, to search that project', () => {
+    expect(parseMergeRequestInvocation(['--repo', 'gitlab-org/cli'])).toEqual({
+      project: GITLAB_CLI,
+      patchArgs: [],
+    });
+  });
+
   it('reads a number without a project', () => {
     expect(parseMergeRequestInvocation(['123'])).toEqual({
       iid: 123,
@@ -65,7 +82,6 @@ describe('parseMergeRequestInvocation', () => {
   });
 
   it.each([
-    [[], 'Specify one merge request.'],
     [['1', '2'], 'Specify exactly one merge request.'],
     [['1', '--repo', 'a/b', '--repo', 'a/b'], 'Specify --repo only once.'],
     [['1', '--repo=a/b', '--repo=a/b'], 'Specify --repo only once.'],

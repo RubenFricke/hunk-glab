@@ -5,6 +5,7 @@ import type { HunkExtensionAPI } from 'hunkdiff/extension';
 import createGlabCommand from './createGlabCommand.ts';
 import createPatchStore from './createPatchStore.ts';
 import GLAB_CLI_REFERENCE from './glabCliReference.ts';
+import readGitCheckout from './readGitCheckout.ts';
 import readGitOrigin from './readGitOrigin.ts';
 
 /**
@@ -21,6 +22,7 @@ const glabExtension = (hunk: HunkExtensionAPI): void => {
       fetch,
       env: process.env,
       readOrigin: readGitOrigin,
+      readCheckout: readGitCheckout,
       patches,
     }),
   );

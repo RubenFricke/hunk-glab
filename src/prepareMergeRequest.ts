@@ -8,6 +8,8 @@ import fetchGitLab, {
   type GitLabFetch,
 } from './fetchGitLab.ts';
 import fetchMergeRequestMetadata from './fetchMergeRequestMetadata.ts';
+import findOpenMergeRequest from './findOpenMergeRequest.ts';
+import type { GitCheckout } from './readGitCheckout.ts';
 import resolveProject, { type ReadOrigin } from './resolveProject.ts';
 import describeMergeRequest from './utils/describeMergeRequest.ts';
 import encodeProject from './utils/encodeProject.ts';
@@ -20,6 +22,10 @@ export interface MergeRequestDependencies {
   readonly fetch: GitLabFetch;
   readonly env: GitLabEnv;
   readonly readOrigin: ReadOrigin;
+  readonly readCheckout: (
+    cwd: string,
+    signal: AbortSignal,
+  ) => Promise<GitCheckout>;
 }
 
 interface PrepareMergeRequestOptions {
@@ -39,8 +45,8 @@ interface PreparedDiff {
 }
 
 /**
- * Resolves one `hunk glab mr` invocation and fetches the metadata and the diff
- * of its merge request.
+ * Resolves one `hunk glab mr` invocation, finding the merge request from HEAD
+ * when no number was given, and fetches its metadata and diff.
  *
  * @param options - The arguments, the command context and the dependencies.
  * @returns The diff, the review header and the options for `hunk patch`.
@@ -53,17 +59,23 @@ const prepareMergeRequest = async ({
   dependencies,
 }: PrepareMergeRequestOptions): Promise<PreparedDiff> => {
   const invocation = parseMergeRequestInvocation(args);
-  const { iid, patchArgs } = invocation;
+  const { patchArgs } = invocation;
   const project = await resolveProject({
-    ...(invocation.project === undefined
-      ? {}
-      : { project: invocation.project }),
+    project: invocation.project,
     cwd: ctx.cwd,
     signal: ctx.signal,
     readOrigin: dependencies.readOrigin,
   });
-
-  const target = { project, iid };
+  const target =
+    invocation.iid === undefined
+      ? await findOpenMergeRequest({
+          project,
+          checkout: await dependencies.readCheckout(ctx.cwd, ctx.signal),
+          signal: ctx.signal,
+          fetch: dependencies.fetch,
+          env: dependencies.env,
+        })
+      : { project, iid: invocation.iid };
   const name = describeMergeRequest(target);
   await ctx.stderr.write(`Fetching GitLab merge request ${name}…\n`);
   const review = await fetchMergeRequestMetadata({
@@ -73,7 +85,7 @@ const prepareMergeRequest = async ({
     env: dependencies.env,
   });
   const bytes = await fetchGitLab({
-    apiPath: `projects/${encodeProject(project)}/merge_requests/${String(iid)}/raw_diffs`,
+    apiPath: `projects/${encodeProject(target.project)}/merge_requests/${String(target.iid)}/raw_diffs`,
     accept: 'text/plain',
     name,
     maxBytes: MAX_DIFF_BYTES,
@@ -87,7 +99,7 @@ const prepareMergeRequest = async ({
   const projectName = review.repository?.split('/').at(-1) ?? 'project';
   return {
     bytes,
-    filename: `${projectName}-mr-${String(iid)}.diff`,
+    filename: `${projectName}-mr-${String(target.iid)}.diff`,
     patchArgs,
     review,
   };

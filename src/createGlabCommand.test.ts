@@ -29,6 +29,10 @@ const refuseFetch = (): Promise<Response> =>
 const refuseOrigin = (): Promise<string> =>
   Promise.reject(new Error('The command must not read origin.'));
 
+/** Fails the test when a command reads the checkout it should not need. */
+const refuseCheckout = (): Promise<never> =>
+  Promise.reject(new Error('The command must not read the checkout.'));
+
 describe('createGlabCommand', () => {
   let root = '';
   let patches: PatchStore;
@@ -51,6 +55,7 @@ describe('createGlabCommand', () => {
         fetch: refuseFetch,
         env: {},
         readOrigin: refuseOrigin,
+        readCheckout: refuseCheckout,
         patches,
       })(args, ctx);
 
@@ -75,6 +80,7 @@ describe('createGlabCommand', () => {
       fetch: refuseFetch,
       env: {},
       readOrigin: refuseOrigin,
+      readCheckout: refuseCheckout,
       patches,
     })(args, ctx);
 
@@ -85,15 +91,32 @@ describe('createGlabCommand', () => {
 
   it('leaves a --help after -- to hunk patch', async () => {
     const { ctx } = recordCliContext();
+    const { fetch } = recordFetch((url) =>
+      url.includes('/repository/commits/')
+        ? Response.json([
+            {
+              iid: 4306,
+              state: 'opened',
+              references: { full: 'gitlab-org/cli!4306' },
+            },
+          ])
+        : respond(url),
+    );
 
-    await expect(
-      createGlabCommand({
-        fetch: refuseFetch,
-        env: {},
-        readOrigin: refuseOrigin,
-        patches,
-      })(['mr', '--', '--help'], ctx),
-    ).rejects.toMatchObject({ message: 'Specify one merge request.' });
+    const result = await createGlabCommand({
+      fetch,
+      env: {},
+      readOrigin: () => Promise.resolve('git@gitlab.com:gitlab-org/cli.git'),
+      readCheckout: () =>
+        Promise.resolve({
+          branch: 'main',
+          sha: 'd7e533ee212a48942cfd8544188bb15f46630f32',
+        }),
+      patches,
+    })(['mr', '--', '--help'], ctx);
+
+    expect(result).toMatchObject({ kind: 'delegate' });
+    expect(result.kind === 'delegate' && result.argv.at(-1)).toBe('--help');
   });
 
   it('names an unknown command and prints nothing', async () => {
@@ -104,6 +127,7 @@ describe('createGlabCommand', () => {
         fetch: refuseFetch,
         env: {},
         readOrigin: refuseOrigin,
+        readCheckout: refuseCheckout,
         patches,
       })(['foo', '1'], ctx),
     ).rejects.toMatchObject({
@@ -122,6 +146,7 @@ describe('createGlabCommand', () => {
         fetch: refuseFetch,
         env: {},
         readOrigin: refuseOrigin,
+        readCheckout: refuseCheckout,
         patches,
       })(['pr', '1'], ctx),
     ).rejects.toMatchObject({
@@ -138,6 +163,7 @@ describe('createGlabCommand', () => {
         fetch: refuseFetch,
         env: {},
         readOrigin: refuseOrigin,
+        readCheckout: refuseCheckout,
         patches,
       })(['\u001b[2Jmr'], ctx),
     ).rejects.toMatchObject({
@@ -153,6 +179,7 @@ describe('createGlabCommand', () => {
       fetch,
       env: {},
       readOrigin: refuseOrigin,
+      readCheckout: refuseCheckout,
       patches,
     })([...MR_ARGS, '--', '--mode', 'unified'], ctx);
 
@@ -191,6 +218,7 @@ describe('createGlabCommand', () => {
         fetch,
         env: {},
         readOrigin: refuseOrigin,
+        readCheckout: refuseCheckout,
         patches: abortingPatches,
       })(MR_ARGS, ctx),
     ).rejects.toMatchObject({ message: 'GitLab diff loading was cancelled.' });
@@ -210,10 +238,13 @@ describe('createGlabCommand', () => {
     const { fetch } = recordFetch(respond);
 
     await expect(
-      createGlabCommand({ fetch, env: {}, readOrigin: refuseOrigin, patches })(
-        MR_ARGS,
-        ctx,
-      ),
+      createGlabCommand({
+        fetch,
+        env: {},
+        readOrigin: refuseOrigin,
+        readCheckout: refuseCheckout,
+        patches,
+      })(MR_ARGS, ctx),
     ).rejects.toMatchObject({ message: 'GitLab diff loading was cancelled.' });
     expect(await readdir(root)).toEqual([]);
   });
@@ -227,10 +258,13 @@ describe('createGlabCommand', () => {
     });
 
     await expect(
-      createGlabCommand({ fetch, env: {}, readOrigin: refuseOrigin, patches })(
-        MR_ARGS,
-        ctx,
-      ),
+      createGlabCommand({
+        fetch,
+        env: {},
+        readOrigin: refuseOrigin,
+        readCheckout: refuseCheckout,
+        patches,
+      })(MR_ARGS, ctx),
     ).rejects.toMatchObject({ message: 'GitLab diff loading was cancelled.' });
     expect(await readdir(root)).toEqual([]);
   });
@@ -269,6 +303,7 @@ describe('createGlabCommand', () => {
         fetch,
         env: {},
         readOrigin: refuseOrigin,
+        readCheckout: refuseCheckout,
         patches,
       })(MR_ARGS, ctx),
     ).rejects.toMatchObject({ message: 'GitLab diff loading was cancelled.' });

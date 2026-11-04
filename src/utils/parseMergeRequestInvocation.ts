@@ -10,7 +10,8 @@ const REPO_PREFIX = '--repo=';
 
 /** What `hunk glab mr` was asked to open. */
 interface MergeRequestInvocation {
-  readonly iid: number;
+  /** Absent when the merge request is found from HEAD. */
+  readonly iid?: number;
   /** Absent when the project comes from the local origin. */
   readonly project?: GitLabProject;
   /** Everything after the first `--`, for `hunk patch`. */
@@ -23,8 +24,8 @@ interface MergeRequestInvocation {
  *
  * @param args - The tokens after `hunk glab mr`.
  * @returns The invocation.
- * @throws {HunkExtensionUserError} When the tokens do not name exactly one
- *   merge request.
+ * @throws {HunkExtensionUserError} When the tokens name more than one merge
+ *   request, or a malformed one.
  */
 const parseMergeRequestInvocation = (
   args: readonly string[],
@@ -65,20 +66,18 @@ const parseMergeRequestInvocation = (
     target = token;
   }
 
-  if (target === undefined) {
-    throw buildInvocationError('Specify one merge request.');
-  }
-  const locator = parseMergeRequestLocator(target);
-  if (repo !== undefined && locator.project !== undefined) {
+  const locator =
+    target === undefined ? undefined : parseMergeRequestLocator(target);
+  if (repo !== undefined && locator?.project !== undefined) {
     throw buildInvocationError(
       'Do not combine --repo with a locator that already names a project.',
     );
   }
   const project =
-    locator.project ??
+    locator?.project ??
     (repo === undefined ? undefined : parseGitLabProject(repo));
   return {
-    iid: locator.iid,
+    ...(locator === undefined ? {} : { iid: locator.iid }),
     ...(project === undefined ? {} : { project }),
     patchArgs: Object.freeze([...patchArgs]),
   };
