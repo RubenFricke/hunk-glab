@@ -1,8 +1,8 @@
 # hunk-glab
 
-Review GitLab merge requests in [Hunk](https://hunk.dev) from the command line, the way `hunk gh` reviews GitHub pull requests.
+Review GitLab merge requests, commits and comparisons in [Hunk](https://hunk.dev) from the command line, the way `hunk gh` reviews GitHub pull requests.
 
-Work in progress: `hunk glab mr` opens a merge request on gitlab.com. Commits and comparisons come next.
+Work in progress: it works on gitlab.com; the full README comes with the first release.
 
 ```bash
 hunk glab mr                                  # the open merge request of the current branch
@@ -12,7 +12,12 @@ hunk glab mr 'group/project!123'              # GitLab's own reference; quote th
 hunk glab mr https://gitlab.com/group/project/-/merge_requests/123
 GITLAB_TOKEN=glpat-… hunk glab mr 123         # private projects need a token with read_api
 hunk glab mr 123 -- --mode unified            # options after -- go to hunk patch
+
+hunk glab commit abcdef1                      # one commit; also group/project@abcdef1 or its URL
+hunk glab compare main...feature              # the changes of feature since it left main
 ```
+
+When GitLab does not return a diff in full, such as a collapsed file in a comparison, `hunk glab` refuses it and names the local command that shows it all: `hunk diff main...feature` or `hunk show abcdef1` in a checkout.
 
 ## Development
 
