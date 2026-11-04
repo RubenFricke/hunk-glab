@@ -12,13 +12,18 @@ const MATCH = {
   references: { full: 'gitlab-org/cli!4307' },
 };
 
-const find = (respond: (url: string) => Response) => {
+const UPSTREAM = 'a'.repeat(40);
+
+const find = (
+  respond: (url: string) => Response,
+  checkout: { branch: string; sha: string; upstreamSha?: string } = CHECKOUT,
+) => {
   const recorded = recordFetch(respond);
   return {
     requests: recorded.requests,
     result: findOpenMergeRequest({
       project: PROJECT,
-      checkout: CHECKOUT,
+      checkout,
       signal: new AbortController().signal,
       fetch: recorded.fetch,
       env: {},
@@ -64,5 +69,59 @@ describe('findOpenMergeRequest', () => {
     await expect(result).rejects.toMatchObject({
       message: 'GitLab returned malformed merge-request matches.',
     });
+  });
+
+  it.each([
+    ['no match', () => Response.json([])],
+    ['an unknown commit', () => new Response('', { status: 404 })],
+  ])(
+    'tries the pushed upstream when HEAD gives %s',
+    async (_name, respondToHead) => {
+      const { requests, result } = find(
+        (url) => (url.includes(SHA) ? respondToHead() : Response.json([MATCH])),
+        { ...CHECKOUT, upstreamSha: UPSTREAM },
+      );
+
+      expect(await result).toEqual({ project: PROJECT, iid: 4307 });
+      expect(requests.map(({ url }) => url.includes(UPSTREAM))).toEqual([
+        false,
+        true,
+      ]);
+    },
+  );
+
+  it('names the upstream when it has no match either', async () => {
+    const { result } = find(() => Response.json([]), {
+      ...CHECKOUT,
+      upstreamSha: UPSTREAM,
+    });
+
+    await expect(result).rejects.toMatchObject({
+      message: `No accessible open merge request matches gitlab-org/cli:feature/x@${UPSTREAM.slice(0, 12)}.`,
+    });
+  });
+
+  it('asks once when the upstream is HEAD', async () => {
+    const { requests, result } = find(() => Response.json([]), {
+      ...CHECKOUT,
+      upstreamSha: SHA,
+    });
+
+    await expect(result).rejects.toMatchObject({
+      name: 'HunkExtensionUserError',
+    });
+    expect(requests).toHaveLength(1);
+  });
+
+  it('does not hide another failure behind the upstream', async () => {
+    const { requests, result } = find(() => new Response('', { status: 401 }), {
+      ...CHECKOUT,
+      upstreamSha: UPSTREAM,
+    });
+
+    await expect(result).rejects.toMatchObject({
+      message: `GitLab rejected the configured token for gitlab-org/cli:feature/x@${SHA.slice(0, 12)}.`,
+    });
+    expect(requests).toHaveLength(1);
   });
 });
