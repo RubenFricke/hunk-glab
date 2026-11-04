@@ -1,12 +1,9 @@
-import assertSafeArgument from './assertSafeArgument.ts';
 import buildInvocationError from './buildInvocationError.ts';
+import parseCommitLocator from './parseCommitLocator.ts';
 import parseGitLabProject, {
   type GitLabProject,
 } from './parseGitLabProject.ts';
 import splitSubcommandArgs from './splitSubcommandArgs.ts';
-
-/** A SHA of 7 to 40 hexadecimal characters, as `hunk gh commit` takes it. */
-const COMMIT_SHA = /^[0-9a-f]{7,40}$/i;
 
 /** What `hunk glab commit` was asked to open. */
 interface CommitInvocation {
@@ -24,7 +21,7 @@ interface CommitInvocation {
  * @param args - The tokens after `hunk glab commit`.
  * @returns The invocation.
  * @throws {HunkExtensionUserError} When the tokens do not name exactly one
- *   commit by its SHA.
+ *   commit, or name its project twice.
  */
 const parseCommitInvocation = (args: readonly string[]): CommitInvocation => {
   const { target, repo, patchArgs } = splitSubcommandArgs(args, {
@@ -35,13 +32,18 @@ const parseCommitInvocation = (args: readonly string[]): CommitInvocation => {
   if (target === undefined) {
     throw buildInvocationError('Specify one GitLab commit.');
   }
-  assertSafeArgument(target, 'Commit locator');
-  if (!COMMIT_SHA.test(target)) {
-    throw buildInvocationError(`Invalid GitLab commit locator: ${target}`);
+  const locator = parseCommitLocator(target);
+  if (repo !== undefined && locator.project !== undefined) {
+    throw buildInvocationError(
+      'Do not combine --repo with a locator that already names a project.',
+    );
   }
+  const project =
+    locator.project ??
+    (repo === undefined ? undefined : parseGitLabProject(repo));
   return {
-    sha: target.toLowerCase(),
-    ...(repo === undefined ? {} : { project: parseGitLabProject(repo) }),
+    sha: locator.sha,
+    ...(project === undefined ? {} : { project }),
     patchArgs,
   };
 };

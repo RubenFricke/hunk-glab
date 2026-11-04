@@ -22,6 +22,28 @@ describe('parseCommitInvocation', () => {
   });
 
   it.each([
+    [['gitlab-org/cli@d7e533e']],
+    [['https://gitlab.com/gitlab-org/cli/-/commit/d7e533e']],
+  ])('reads the project from the locator %j', (args) => {
+    expect(parseCommitInvocation(args)).toEqual({
+      sha: 'd7e533e',
+      project: { kind: 'path', path: 'gitlab-org/cli' },
+      patchArgs: [],
+    });
+  });
+
+  it('rejects --repo next to a locator that names a project', () => {
+    expect(() =>
+      parseCommitInvocation(['gitlab-org/cli@d7e533e', '--repo', 'a/b']),
+    ).toThrow(
+      expect.objectContaining({
+        message:
+          'Do not combine --repo with a locator that already names a project.',
+      }),
+    );
+  });
+
+  it.each([
     [[], 'Specify one GitLab commit.'],
     [['abc123'], 'Invalid GitLab commit locator: abc123'],
     [['main'], 'Invalid GitLab commit locator: main'],
