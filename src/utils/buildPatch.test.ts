@@ -73,11 +73,23 @@ describe('buildPatch', () => {
     );
   });
 
-  it('marks a changed file without hunks as binary', () => {
+  it('writes the binary line GitLab sends for a changed binary file', () => {
     expect(
-      buildPatch([file({ old_path: 'i.png', new_path: 'i.png', diff: '' })]),
+      buildPatch([
+        file({
+          old_path: 'i.png',
+          new_path: 'i.png',
+          diff: 'Binary files a/i.png and b/i.png differ\n',
+        }),
+      ]),
     ).toBe(
       'diff --git a/i.png b/i.png\nBinary files a/i.png and b/i.png differ\n',
+    );
+  });
+
+  it('rejects a changed file with no diff and nothing else changed', () => {
+    expect(() => buildPatch([file({ diff: '' })])).toThrow(
+      expect.objectContaining({ message: MALFORMED }),
     );
   });
 

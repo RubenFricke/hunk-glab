@@ -5,7 +5,7 @@ import quoteGitPath from './quoteGitPath.ts';
 
 const MALFORMED = 'GitLab returned malformed diff data.';
 const FILE_MODE = /^[0-7]{1,6}$/;
-/** GitLab sends this line for some binary files and nothing for others. */
+/** Gitaly writes this line for every binary file. */
 const BINARY_DIFF = /^Binary files .* differ\n?$/;
 
 /**
@@ -20,8 +20,8 @@ const BINARY_DIFF = /^Binary files .* differ\n?$/;
  * @param incompleteSuggestion - Where to get the full diff when GitLab left a
  *   file out.
  * @returns The patch, or an empty string for no files.
- * @throws {HunkExtensionUserError} When the list is malformed or GitLab left
- *   out the diff of a file.
+ * @throws {HunkExtensionUserError} When the list or an entry is malformed, or
+ *   GitLab left out the diff of a file.
  */
 const buildPatch = (value: unknown, incompleteSuggestion?: string): string => {
   const malformed = (): HunkExtensionUserError =>
@@ -92,10 +92,14 @@ const buildPatch = (value: unknown, incompleteSuggestion?: string): string => {
           `rename to ${quoteGitPath(newPath)}`,
         );
       }
-      const isBinary =
-        BINARY_DIFF.test(diff) ||
-        (!diff && !isNew && !isDeleted && !isRenamed && oldMode === newMode);
-      if (isBinary) {
+      /**
+       * Without content, only a new, deleted, renamed or re-moded file is a
+       * change.
+       */
+      if (!diff && !isNew && !isDeleted && !isRenamed && oldMode === newMode) {
+        throw malformed();
+      }
+      if (BINARY_DIFF.test(diff)) {
         lines.push(
           `Binary files ${isNew ? '/dev/null' : oldName} and ${isDeleted ? '/dev/null' : newName} differ`,
         );
