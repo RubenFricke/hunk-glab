@@ -22,6 +22,8 @@ export interface FetchGitLabOptions {
   readonly maxBytes: number;
   readonly tooLargeMessage: string;
   readonly emptyMessage: string;
+  /** Replaces the merge-request wording of a 404, such as for a commit. */
+  readonly notFoundMessage?: string | undefined;
   readonly signal: AbortSignal;
   readonly fetch: GitLabFetch;
   /** `GITLAB_TOKEN`, else `GITLAB_ACCESS_TOKEN`; without one, anonymous. */
@@ -44,6 +46,7 @@ const fetchGitLab = async ({
   maxBytes,
   tooLargeMessage,
   emptyMessage,
+  notFoundMessage,
   signal,
   fetch,
   env,
@@ -92,6 +95,9 @@ const fetchGitLab = async ({
     throw new HunkExtensionUserError(
       `GitLab redirected the request for ${name}; refusing to forward credentials.`,
     );
+  }
+  if (response.status === 404 && notFoundMessage !== undefined) {
+    throw new HunkExtensionUserError(notFoundMessage);
   }
   if (!response.ok) {
     throw buildStatusError(response.status, name);

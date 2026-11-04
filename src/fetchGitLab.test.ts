@@ -76,6 +76,20 @@ describe('fetchGitLab', () => {
     expect(requests).toEqual([]);
   });
 
+  it('uses its own message for a 404 when one is given', async () => {
+    const { fetch } = recordFetch(() => new Response('', { status: 404 }));
+
+    await expect(
+      fetchGitLab({
+        ...options(fetch),
+        notFoundMessage: 'GitLab could not find an accessible commit.',
+      }),
+    ).rejects.toMatchObject({
+      message: 'GitLab could not find an accessible commit.',
+      suggestions: [],
+    });
+  });
+
   it('refuses a redirect', async () => {
     const { fetch } = recordFetch(
       () =>
