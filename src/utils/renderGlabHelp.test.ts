@@ -14,6 +14,8 @@ describe('renderGlabHelp', () => {
         'GitLab commands:',
         '  mr [merge-request] [--repo <group/project>] [-- <patch-options...>]',
         '      Review a GitLab merge request; infer it from the current branch when omitted.',
+        '  commit <commit> [--repo <group/project>] [-- <patch-options...>]',
+        '      Review a GitLab commit without requiring the glab CLI.',
         '',
         'Options:',
         '  --repo <group/project>  use an explicit project path or id instead of the origin',

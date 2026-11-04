@@ -34,7 +34,10 @@ describe('GLAB_CLI_REFERENCE', () => {
   it('describes hunk glab mr with its forms', () => {
     const [mr] = GLAB_CLI_REFERENCE.subcommands;
 
-    expect(GLAB_CLI_REFERENCE.subcommands).toHaveLength(1);
+    expect(GLAB_CLI_REFERENCE.subcommands.map(({ name }) => name)).toEqual([
+      'mr',
+      'commit',
+    ]);
     expect(mr?.name).toBe('mr');
     expect(mr?.forms.map(({ args }) => args)).toEqual([
       '',

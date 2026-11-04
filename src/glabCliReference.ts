@@ -8,7 +8,7 @@ interface GlabCliForm {
 
 /** One `hunk glab` subcommand. */
 export interface GlabCliSubcommand {
-  readonly name: 'mr';
+  readonly name: 'mr' | 'commit';
   /** The positional arguments between the name and the shared options. */
   readonly arguments: string;
   /** One line in the `hunk glab --help` overview. */
@@ -102,6 +102,23 @@ const GLAB_CLI_REFERENCE: GlabCliReference = {
       notes: [
         'Quote `!123`, because shells expand `!` from their history.',
         'Pass Hunk patch options after `--`.',
+      ],
+    },
+    {
+      name: 'commit',
+      arguments: '<commit>',
+      summary: 'Review a GitLab commit without requiring the glab CLI.',
+      description: 'Review a GitLab commit without requiring the glab CLI.',
+      formsHeading: 'Commit forms',
+      forms: [
+        {
+          args: 'abcdef1',
+          description: 'infer the project from the local origin',
+        },
+        {
+          args: 'abcdef1 --repo gitlab-org/cli',
+          description: 'use an explicit project',
+        },
       ],
     },
   ],

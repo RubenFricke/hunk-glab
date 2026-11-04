@@ -4,6 +4,7 @@ import type { PatchStore } from './createPatchStore.ts';
 import GLAB_CLI_REFERENCE, {
   type GlabCliSubcommand,
 } from './glabCliReference.ts';
+import prepareCommit from './prepareCommit.ts';
 import prepareMergeRequest, {
   type MergeRequestDependencies,
   type PreparedDiff,
@@ -22,6 +23,7 @@ interface GlabCommandDependencies extends MergeRequestDependencies {
 /** How each subcommand fetches its diff; every described one must have one. */
 const PREPARE_DIFF = {
   mr: prepareMergeRequest,
+  commit: prepareCommit,
 } as const satisfies Record<
   GlabCliSubcommand['name'],
   (options: PrepareDiffOptions) => Promise<PreparedDiff>
