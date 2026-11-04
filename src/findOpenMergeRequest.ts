@@ -36,8 +36,9 @@ interface FindOpenMergeRequestOptions {
  *
  * @param options - The project, the checkout and the transport.
  * @returns The merge request.
- * @throws {HunkExtensionUserError} When GitLab does not know the commit, no
- *   open merge request matches, or the request fails.
+ * @throws {HunkExtensionUserError} When GitLab does not know the commit, no or
+ *   several open merge requests match, the matches go on to a next page, or the
+ *   request fails.
  */
 const findOpenMergeRequest = async ({
   project,
@@ -62,7 +63,10 @@ const findOpenMergeRequest = async ({
     const commitNotFound = (commit: string): string =>
       `GitLab could not find an accessible commit at ${projectName}@${commit}.`;
 
-    /** Throws for an unknown commit; returns undefined when nothing matches. */
+    /**
+     * Throws for an unknown commit, several matches or a next page; returns
+     * undefined when nothing matches.
+     */
     const search = async (
       commit: string,
     ): Promise<MergeRequestTarget | undefined> => {
@@ -75,17 +79,26 @@ const findOpenMergeRequest = async ({
           'GitLab merge-request matches exceed the 1 MiB safety limit.',
         emptyMessage: 'GitLab returned empty merge-request matches.',
         notFoundMessage: commitNotFound(commit),
+        nextPageMessage: `GitLab returned paginated merge-request matches for ${describeCommit(commit)}, so one merge request cannot be selected safely.`,
         signal,
         fetch,
         env,
       });
-      const [match] = parseMergeRequestMatches(
+      const matches = parseMergeRequestMatches(
         parseJsonBody(
           bytes,
           'GitLab returned malformed merge-request matches.',
         ),
       );
-      return match;
+      if (matches.length > 1) {
+        throw new HunkExtensionUserError(
+          `Multiple accessible open merge requests match ${describeCommit(commit)}.`,
+          {
+            suggestions: ['Pass the intended merge-request number explicitly.'],
+          },
+        );
+      }
+      return matches[0];
     };
 
     let failure = new HunkExtensionUserError('No commit was searched.');

@@ -133,6 +133,47 @@ describe('findOpenMergeRequest', () => {
     expect(requests).toHaveLength(1);
   });
 
+  it('refuses to choose between two open merge requests', async () => {
+    const other = {
+      ...MATCH,
+      iid: 4308,
+      references: { full: 'gitlab-org/cli!4308' },
+    };
+    const { result } = find(() => Response.json([MATCH, other]));
+
+    await expect(result).rejects.toMatchObject({
+      message: `Multiple accessible open merge requests match gitlab-org/cli:feature/x@${SHA.slice(0, 12)}.`,
+      suggestions: ['Pass the intended merge-request number explicitly.'],
+    });
+  });
+
+  it('refuses matches that continue on a next page', async () => {
+    const { result } = find(() =>
+      Response.json([MATCH], { headers: { 'x-next-page': '2' } }),
+    );
+
+    await expect(result).rejects.toMatchObject({
+      message: `GitLab returned paginated merge-request matches for gitlab-org/cli:feature/x@${SHA.slice(0, 12)}, so one merge request cannot be selected safely.`,
+    });
+  });
+
+  it('stops after two matches, without trying the upstream or the parent', async () => {
+    const other = {
+      ...MATCH,
+      iid: 4308,
+      references: { full: 'gitlab-org/cli!4308' },
+    };
+    const { requests, result } = find(() => Response.json([MATCH, other]), {
+      ...CHECKOUT,
+      upstreamSha: UPSTREAM,
+    });
+
+    await expect(result).rejects.toMatchObject({
+      message: expect.stringMatching(/^Multiple accessible/) as unknown,
+    });
+    expect(requests).toHaveLength(1);
+  });
+
   describe('from a fork', () => {
     const FORK = { kind: 'path', path: 'scop/cli-2' } as const;
     const forkOf = (url: string): Response =>
