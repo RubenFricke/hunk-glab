@@ -41,8 +41,8 @@ export interface PreparedDiff {
   readonly bytes: Uint8Array;
   readonly filename: string;
   readonly patchArgs: readonly string[];
-  /** The header Hunk shows above the review. */
-  readonly review: ExtensionReviewDescriptor;
+  /** The header Hunk shows above the review, when one fits. */
+  readonly review?: ExtensionReviewDescriptor;
 }
 
 /**

@@ -98,7 +98,7 @@ const createGlabCommand = ({
     return {
       kind: 'delegate',
       argv: ['patch', patchPath, ...prepared.patchArgs],
-      review: prepared.review,
+      ...(prepared.review === undefined ? {} : { review: prepared.review }),
     };
   };
 };
