@@ -4,9 +4,9 @@ import {
 } from 'hunkdiff/extension';
 
 import type { MergeRequestTarget } from './describeMergeRequest.ts';
-import hasControlCharacter from './hasControlCharacter.ts';
 import isRecord from './isRecord.ts';
 import parseGitLabPageUrl from './parseGitLabPageUrl.ts';
+import readBoundedString from './readBoundedString.ts';
 
 const MAX_TITLE_BYTES = 2 * 1024;
 const MAX_URL_BYTES = 2 * 1024;
@@ -48,13 +48,8 @@ const parseMergeRequestMetadata = (
     field: string,
     maxBytes: number,
   ): string => {
-    const text = isRecord(container) ? container[field] : undefined;
-    if (
-      typeof text !== 'string' ||
-      text.length === 0 ||
-      hasControlCharacter(text) ||
-      new TextEncoder().encode(text).byteLength > maxBytes
-    ) {
+    const text = readBoundedString(container, field, maxBytes);
+    if (text === undefined) {
       throw malformed();
     }
     return text;
