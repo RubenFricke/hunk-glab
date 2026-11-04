@@ -4,13 +4,13 @@ import {
   HunkExtensionUserError,
 } from 'hunkdiff/extension';
 
+import fitsReviewHeader from './fitsReviewHeader.ts';
 import isRecord from './isRecord.ts';
 import parseGitLabPageUrl from './parseGitLabPageUrl.ts';
 import type { GitLabProject } from './parseGitLabProject.ts';
 import readBoundedString from './readBoundedString.ts';
 
-/** Hunk's own limits for a review header; a header over them fails the run. */
-const MAX_HEADER_BYTES = 4 * 1024;
+/** Hunk lists at most this many commits; more fails the run. */
 const MAX_HEADER_COMMITS = 8;
 const MAX_TITLE_BYTES = 2 * 1024;
 const MAX_URL_BYTES = 2 * 1024;
@@ -135,16 +135,13 @@ const parseComparison = (
     commitCount: commits.length,
     commits: listed,
   });
-  while (
-    shown.length > 0 &&
-    sizeOf(JSON.stringify(describe(shown))) > MAX_HEADER_BYTES
-  ) {
+  while (shown.length > 0 && !fitsReviewHeader(describe(shown))) {
     shown.pop();
   }
   const review = describe(shown);
-  return sizeOf(JSON.stringify(review)) > MAX_HEADER_BYTES
-    ? { files: diffs as unknown[], projectPath }
-    : { files: diffs as unknown[], review, projectPath };
+  return fitsReviewHeader(review)
+    ? { files: diffs as unknown[], review, projectPath }
+    : { files: diffs as unknown[], projectPath };
 };
 
 export default parseComparison;
