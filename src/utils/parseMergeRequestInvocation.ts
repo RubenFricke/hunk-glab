@@ -1,12 +1,9 @@
-import assertSafeArgument from './assertSafeArgument.ts';
 import buildInvocationError from './buildInvocationError.ts';
 import parseGitLabProject, {
   type GitLabProject,
 } from './parseGitLabProject.ts';
 import parseMergeRequestLocator from './parseMergeRequestLocator.ts';
-
-const REPO_OPTION = '--repo';
-const REPO_PREFIX = '--repo=';
+import splitSubcommandArgs from './splitSubcommandArgs.ts';
 
 /** What `hunk glab mr` was asked to open. */
 interface MergeRequestInvocation {
@@ -30,42 +27,11 @@ interface MergeRequestInvocation {
 const parseMergeRequestInvocation = (
   args: readonly string[],
 ): MergeRequestInvocation => {
-  const separator = args.indexOf('--');
-  const ownedArgs = separator < 0 ? args : args.slice(0, separator);
-  const patchArgs = separator < 0 ? [] : args.slice(separator + 1);
-
-  let target: string | undefined;
-  let repo: string | undefined;
-  const takeRepo = (value: string | undefined): void => {
-    if (repo !== undefined) {
-      throw buildInvocationError('Specify --repo only once.');
-    }
-    if (!value || value.startsWith('--')) {
-      throw buildInvocationError('`--repo` requires a group/project value.');
-    }
-    repo = value;
-  };
-  for (let index = 0; index < ownedArgs.length; index += 1) {
-    const token = ownedArgs[index] ?? '';
-    if (token === REPO_OPTION) {
-      takeRepo(ownedArgs[index + 1]);
-      index += 1;
-      continue;
-    }
-    if (token.startsWith(REPO_PREFIX)) {
-      takeRepo(token.slice(REPO_PREFIX.length));
-      continue;
-    }
-    if (token.startsWith('-')) {
-      assertSafeArgument(token, 'Merge-request option');
-      throw buildInvocationError(`Unknown mr option: ${token}`);
-    }
-    if (target !== undefined) {
-      throw buildInvocationError('Specify exactly one merge request.');
-    }
-    target = token;
-  }
-
+  const { target, repo, patchArgs } = splitSubcommandArgs(args, {
+    command: 'mr',
+    subject: 'merge request',
+    optionLabel: 'Merge-request option',
+  });
   const locator =
     target === undefined ? undefined : parseMergeRequestLocator(target);
   if (repo !== undefined && locator?.project !== undefined) {
@@ -79,7 +45,7 @@ const parseMergeRequestInvocation = (
   return {
     ...(locator === undefined ? {} : { iid: locator.iid }),
     ...(project === undefined ? {} : { project }),
-    patchArgs: Object.freeze([...patchArgs]),
+    patchArgs,
   };
 };
 
