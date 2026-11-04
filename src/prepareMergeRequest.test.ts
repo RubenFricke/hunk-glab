@@ -248,7 +248,11 @@ describe('prepareMergeRequest', () => {
 
   it('searches the project of --repo without reading origin', async () => {
     const sha = 'd7e533ee212a48942cfd8544188bb15f46630f32';
-    const { requests, fetch } = recordFetch(() => Response.json([]));
+    const { requests, fetch } = recordFetch((url) =>
+      url.includes('/repository/commits/')
+        ? Response.json([])
+        : Response.json({ id: 34675721 }),
+    );
 
     await expect(
       prepareMergeRequest({
