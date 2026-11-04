@@ -1,0 +1,63 @@
+name: Newest Hunk
+
+# The CI workflow tests the oldest Hunk that hunk-glab supports, from the
+# lockfile. This one tests the newest Hunk release, so a release that breaks
+# the extension shows up the same day instead of in a user's report.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    # Daily, off the hour: GitHub delays runs that start at minute 0.
+    - cron: '23 5 * * *'
+  workflow_dispatch:
+    inputs:
+      hunk_version:
+        description: A Hunk version to test instead of the newest, for example 0.24.0
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+# A new push to a pull request makes its older run useless.
+concurrency:
+  group: newest-hunk-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  newest-hunk:
+    name: Newest Hunk
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Installs the Bun and Node.js versions in mise.toml.
+      - uses: jdx/mise-action@82a612c5ab8bcda7cc5db6b7e81a8e7584c3dc6e # v5.2.3
+      - run: bun install --frozen-lockfile
+      - name: Pick the Hunk to test
+        id: hunk
+        env:
+          REQUESTED: ${{ inputs.hunk_version }}
+        run: |
+          version="${REQUESTED:-$(npm view hunkdiff dist-tags.latest)}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      # Without the exemption, the three-day wait in bunfig.toml would quietly
+      # install the previous Hunk on the day a new one comes out. --no-save
+      # keeps package.json on the minimum, which the README test reads.
+      - name: Install Hunk ${{ steps.hunk.outputs.version }}
+        env:
+          VERSION: ${{ steps.hunk.outputs.version }}
+        run: |
+          bun add --dev --exact --no-save "hunkdiff@$VERSION" --minimum-release-age-excludes=hunkdiff
+          installed="$(node_modules/.bin/hunk --version)"
+          if [ "$installed" != "$VERSION" ]; then
+            echo "Expected Hunk $VERSION, but the installed hunk says $installed." >&2
+            exit 1
+          fi
+          echo "Hunk under test: $installed" >> "$GITHUB_STEP_SUMMARY"
+      - run: bun run typecheck
+      - run: bun run test
