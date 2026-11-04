@@ -9,7 +9,7 @@ const FULL_SHA = /^[0-9a-f]{40}(?:[0-9a-f]{24})?$/i;
 const DETACHED_HEAD_EXIT_CODE = 1;
 
 /** The commit the checkout stands on, for finding its merge request. */
-interface GitCheckout {
+export interface GitCheckout {
   readonly branch: string;
   /** The full SHA of HEAD, in lowercase. */
   readonly sha: string;
