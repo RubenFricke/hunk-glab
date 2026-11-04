@@ -81,6 +81,27 @@ describe('buildPatch', () => {
     );
   });
 
+  it('writes the binary line GitLab sends for a deleted binary file', () => {
+    expect(
+      buildPatch([
+        file({
+          old_path: 'i.png',
+          new_path: 'i.png',
+          deleted_file: true,
+          b_mode: '0',
+          diff: 'Binary files a/i.png and /dev/null differ\n',
+        }),
+      ]),
+    ).toBe(
+      [
+        'diff --git a/i.png b/i.png',
+        'deleted file mode 100644',
+        'Binary files a/i.png and /dev/null differ',
+        '',
+      ].join('\n'),
+    );
+  });
+
   it('ends a hunk without a final newline with one', () => {
     expect(buildPatch([file({ diff: '@@ -1 +1 @@\n-a\n+b' })])).toMatch(
       /\+b\n$/,

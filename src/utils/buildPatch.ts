@@ -5,6 +5,8 @@ import quoteGitPath from './quoteGitPath.ts';
 
 const MALFORMED = 'GitLab returned malformed diff data.';
 const FILE_MODE = /^[0-7]{1,6}$/;
+/** GitLab sends this line for some binary files and nothing for others. */
+const BINARY_DIFF = /^Binary files .* differ\n?$/;
 
 /**
  * Builds a Git patch from the files of GitLab's commit or compare diff API.
@@ -84,7 +86,14 @@ const buildPatch = (value: unknown): string => {
           `rename to ${quoteGitPath(newPath)}`,
         );
       }
-      if (diff) {
+      const isBinary =
+        BINARY_DIFF.test(diff) ||
+        (!diff && !isNew && !isDeleted && !isRenamed && oldMode === newMode);
+      if (isBinary) {
+        lines.push(
+          `Binary files ${isNew ? '/dev/null' : oldName} and ${isDeleted ? '/dev/null' : newName} differ`,
+        );
+      } else if (diff) {
         /** Git ends a name with a space in a tab, so its end stays visible. */
         const withTab = (name: string): string =>
           name.includes(' ') ? `${name}\t` : name;
@@ -93,8 +102,6 @@ const buildPatch = (value: unknown): string => {
           `+++ ${isDeleted ? '/dev/null' : withTab(newName)}`,
           diff.endsWith('\n') ? diff.slice(0, -1) : diff,
         );
-      } else if (!isNew && !isDeleted && !isRenamed && oldMode === newMode) {
-        lines.push(`Binary files ${oldName} and ${newName} differ`);
       }
       return `${lines.join('\n')}\n`;
     })
