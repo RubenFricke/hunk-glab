@@ -3,6 +3,7 @@ import {
   HunkExtensionUserError,
 } from 'hunkdiff/extension';
 
+import fitsReviewHeader from './fitsReviewHeader.ts';
 import parseGitLabPageUrl from './parseGitLabPageUrl.ts';
 import type { GitLabProject } from './parseGitLabProject.ts';
 import readBoundedString from './readBoundedString.ts';
@@ -23,18 +24,23 @@ interface CommitTarget {
 
 /** The review header of a commit and the path of its project. */
 interface CommitMetadata {
-  readonly review: ExtensionCommitReviewDescriptor;
+  /** Left out when even its required fields do not fit Hunk's limit. */
+  readonly review?: ExtensionCommitReviewDescriptor;
   /** From the page link, so a project given by id still has a path. */
   readonly projectPath: string;
+  /** The full SHA, also when the header is left out. */
+  readonly revision: string;
 }
 
 /**
  * Turns the GitLab metadata of a commit into the header Hunk shows above the
- * review. Every field is checked, because it reaches the terminal.
+ * review. Every field is checked, because it reaches the terminal. Hunk refuses
+ * the whole review for a header over its total limit, so the link is dropped
+ * first, and the header left out when it still does not fit.
  *
  * @param value - The parsed JSON from GitLab.
  * @param target - The commit that was asked for.
- * @returns The review descriptor and the project path.
+ * @returns The review descriptor, the project path and the full SHA.
  * @throws {HunkExtensionUserError} When a field is missing or malformed, or the
  *   page link is not the commit's.
  */
@@ -71,20 +77,21 @@ const parseCommitMetadata = (
     throw malformed();
   }
 
-  return {
-    projectPath:
-      target.project.kind === 'path' ? target.project.path : page.path,
-    review: {
-      kind: 'commit',
-      provider: 'GitLab',
-      title,
-      url,
-      revision,
-      displayRevision,
-      author,
-      authoredAt,
-    },
+  const projectPath =
+    target.project.kind === 'path' ? target.project.path : page.path;
+  const withoutUrl: ExtensionCommitReviewDescriptor = {
+    kind: 'commit',
+    provider: 'GitLab',
+    title,
+    revision,
+    displayRevision,
+    author,
+    authoredAt,
   };
+  const review = [{ ...withoutUrl, url }, withoutUrl].find(fitsReviewHeader);
+  return review === undefined
+    ? { projectPath, revision }
+    : { projectPath, revision, review };
 };
 
 export default parseCommitMetadata;

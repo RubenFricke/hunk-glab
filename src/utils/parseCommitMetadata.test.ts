@@ -25,6 +25,7 @@ describe('parseCommitMetadata', () => {
   it('describes the commit for the review header', () => {
     expect(parseCommitMetadata(METADATA, BY_PATH)).toEqual({
       projectPath: 'gitlab-org/cli',
+      revision: SHA,
       review: {
         kind: 'commit',
         provider: 'GitLab',
@@ -36,6 +37,24 @@ describe('parseCommitMetadata', () => {
         authoredAt: '2026-10-30T12:00:00.000+00:00',
       },
     });
+  });
+
+  it('drops the link when the header would not fit Hunk without it', () => {
+    /**
+     * 1,901 quotes take 3,802 bytes in JSON: 4,097 with the link, 4,005
+     * without.
+     */
+    const title = '"'.repeat(1901);
+    const { review } = parseCommitMetadata({ ...METADATA, title }, BY_PATH);
+
+    expect(review).toMatchObject({ title });
+    expect(review).not.toHaveProperty('url');
+  });
+
+  it('leaves out the header that does not fit Hunk at all', () => {
+    expect(
+      parseCommitMetadata({ ...METADATA, title: '"'.repeat(2000) }, BY_PATH),
+    ).toEqual({ projectPath: 'gitlab-org/cli', revision: SHA });
   });
 
   it('takes the project path from the page link for a project given by id', () => {

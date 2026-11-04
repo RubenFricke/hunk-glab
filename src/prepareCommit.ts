@@ -52,13 +52,13 @@ const prepareCommit = async ({
     fetch: dependencies.fetch,
     env: dependencies.env,
   });
-  const { review, projectPath } = parseCommitMetadata(
+  const { review, projectPath, revision } = parseCommitMetadata(
     parseJsonBody(metadataBytes, 'GitLab returned malformed commit metadata.'),
     target,
   );
   const bytes = await fetchCommitDiff({
     project,
-    revision: review.revision,
+    revision,
     name,
     signal: ctx.signal,
     fetch: dependencies.fetch,
@@ -69,7 +69,7 @@ const prepareCommit = async ({
     bytes,
     filename: `${projectName}-commit-${target.sha}.diff`,
     patchArgs: invocation.patchArgs,
-    review,
+    ...(review === undefined ? {} : { review }),
   };
 };
 
