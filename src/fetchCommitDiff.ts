@@ -15,6 +15,7 @@ const FILES_PER_PAGE = 100;
 const MAX_FILES = 1000;
 const MALFORMED = 'GitLab returned malformed diff data.';
 const TOO_LARGE = 'The GitLab diff exceeds the 64 MiB safety limit.';
+const SHORT_SHA_LENGTH = 12;
 
 interface FetchCommitDiffOptions {
   readonly project: GitLabProject;
@@ -48,6 +49,8 @@ const fetchCommitDiff = async ({
   env,
   maxBytes = MAX_DIFF_BYTES,
 }: FetchCommitDiffOptions): Promise<Uint8Array> => {
+  /** Hunk reads a local commit through Git, which leaves nothing out. */
+  const fullDiff = `Run \`hunk show ${revision.slice(0, SHORT_SHA_LENGTH)}\` in a checkout that has the commit, for the full diff.`;
   const files: unknown[] = [];
   let usedBytes = 0;
   for (let page = 1; ; page += 1) {
@@ -72,6 +75,7 @@ const fetchCommitDiff = async ({
     if (files.length >= MAX_FILES) {
       throw new HunkExtensionUserError(
         `The GitLab diff of ${name} has 1,000 or more files, so it may be incomplete.`,
+        { suggestions: [fullDiff] },
       );
     }
     if (batch.length < FILES_PER_PAGE) {
@@ -79,7 +83,7 @@ const fetchCommitDiff = async ({
     }
   }
 
-  const patch = new TextEncoder().encode(buildPatch(files));
+  const patch = new TextEncoder().encode(buildPatch(files, fullDiff));
   if (patch.byteLength === 0) {
     throw new HunkExtensionUserError('GitLab returned an empty diff.');
   }

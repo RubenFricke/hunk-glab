@@ -5,6 +5,8 @@ import recordFetch from '../test/recordFetch.ts';
 
 const SHA = 'd7e533ee212a48942cfd8544188bb15f46630f32';
 const NAME = `gitlab-org/cli@${SHA}`;
+const FULL_DIFF =
+  'Run `hunk show d7e533ee212a` in a checkout that has the commit, for the full diff.';
 
 const fileDiff = (index: number): Record<string, unknown> => ({
   old_path: `f${String(index)}.txt`,
@@ -78,8 +80,21 @@ describe('fetchCommitDiff', () => {
 
     await expect(result).rejects.toMatchObject({
       message: `The GitLab diff of ${NAME} has 1,000 or more files, so it may be incomplete.`,
+      suggestions: [FULL_DIFF],
     });
     expect(requests).toHaveLength(10);
+  });
+
+  it('points a file GitLab found too large at a local review', async () => {
+    const { result } = fetchWith(() =>
+      Response.json([{ ...fileDiff(0), too_large: true, diff: '' }]),
+    );
+
+    await expect(result).rejects.toMatchObject({
+      message:
+        'GitLab left out the diff of b/f0.txt, so the review would be incomplete.',
+      suggestions: [FULL_DIFF],
+    });
   });
 
   it('says a commit without files has an empty diff', async () => {
