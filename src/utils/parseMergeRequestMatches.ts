@@ -5,12 +5,13 @@ import isRecord from './isRecord.ts';
 import parseMergeRequestLocator from './parseMergeRequestLocator.ts';
 
 /**
- * Reads the merge requests GitLab lists for a commit. Each one is named by its
- * full reference, `group/project!123`, so a match in a fork's target project
- * keeps that project.
+ * Reads the open merge requests GitLab lists for a commit. Each one is named by
+ * its full reference, `group/project!123`, so a match in a fork's target
+ * project keeps that project. Closed, merged and locked ones are left out, so a
+ * merged merge request with the same commit is never chosen.
  *
  * @param value - The parsed JSON from GitLab.
- * @returns The merge requests, in the order GitLab sent them.
+ * @returns The open merge requests, in the order GitLab sent them.
  * @throws {HunkExtensionUserError} When the list or an entry is malformed.
  */
 const parseMergeRequestMatches = (value: unknown): MergeRequestTarget[] => {
@@ -22,11 +23,17 @@ const parseMergeRequestMatches = (value: unknown): MergeRequestTarget[] => {
     throw malformed();
   }
 
-  return value.map((entry: unknown): MergeRequestTarget => {
+  return value.flatMap((entry: unknown): MergeRequestTarget[] => {
     if (!isRecord(entry)) {
       throw malformed();
     }
-    const { iid, references } = entry;
+    const { iid, state, references } = entry;
+    if (typeof state !== 'string') {
+      throw malformed();
+    }
+    if (state !== 'opened') {
+      return [];
+    }
     const full = isRecord(references) ? references.full : undefined;
     if (
       typeof iid !== 'number' ||
@@ -45,7 +52,7 @@ const parseMergeRequestMatches = (value: unknown): MergeRequestTarget[] => {
     if (locator.project?.kind !== 'path' || locator.iid !== iid) {
       throw malformed();
     }
-    return { project: locator.project, iid };
+    return [{ project: locator.project, iid }];
   });
 };
 

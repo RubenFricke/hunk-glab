@@ -16,6 +16,13 @@ describe('parseMergeRequestMatches', () => {
     ]);
   });
 
+  it.each(['closed', 'merged', 'locked'])(
+    'leaves out a %s merge request',
+    (state) => {
+      expect(parseMergeRequestMatches([{ ...MATCH, state }])).toEqual([]);
+    },
+  );
+
   it('reads an empty list', () => {
     expect(parseMergeRequestMatches([])).toEqual([]);
   });
@@ -24,6 +31,7 @@ describe('parseMergeRequestMatches', () => {
     ['not a list', { ...MATCH }],
     ['an entry that is not an object', [null]],
     ['no iid', [{ ...MATCH, iid: undefined }]],
+    ['no state', [{ ...MATCH, state: undefined }]],
     ['an iid that is not a positive integer', [{ ...MATCH, iid: 0 }]],
     ['no references', [{ ...MATCH, references: null }]],
     [
