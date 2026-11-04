@@ -1,6 +1,6 @@
 /** One accepted spelling of a `hunk glab` subcommand. */
 interface GlabCliForm {
-  /** The arguments after `hunk glab <command>`. */
+  /** The arguments after `hunk glab <command>`; empty when left out. */
   readonly args: string;
   /** Left out when the form speaks for itself. */
   readonly description?: string;
@@ -52,7 +52,7 @@ export interface GlabCliReference {
 const GLAB_CLI_REFERENCE: GlabCliReference = {
   name: 'glab',
   summary: 'Review GitLab merge requests',
-  usage: 'mr <merge-request> [--repo <group/project>]',
+  usage: 'mr [merge-request] [--repo <group/project>]',
   description:
     'Review GitLab merge requests in Hunk without requiring the glab CLI.',
   options: [
@@ -72,12 +72,17 @@ const GLAB_CLI_REFERENCE: GlabCliReference = {
   subcommands: [
     {
       name: 'mr',
-      arguments: '<merge-request>',
-      summary: 'Review a GitLab merge request.',
+      arguments: '[merge-request]',
+      summary:
+        'Review a GitLab merge request; infer it from the current branch when omitted.',
       description:
         'Review a GitLab merge request without requiring the glab CLI.',
       formsHeading: 'Merge request forms',
       forms: [
+        {
+          args: '',
+          description: 'find the open merge request for the current branch',
+        },
         { args: '123', description: 'infer the project from the local origin' },
         { args: "'!123'", description: "use GitLab's own reference" },
         {
@@ -88,6 +93,11 @@ const GLAB_CLI_REFERENCE: GlabCliReference = {
           args: '123 --repo 34675721',
           description: 'use a numeric project id',
         },
+        {
+          args: "'gitlab-org/cli!123'",
+          description: 'name the project and merge request',
+        },
+        { args: 'https://gitlab.com/gitlab-org/cli/-/merge_requests/123' },
       ],
       notes: [
         'Quote `!123`, because shells expand `!` from their history.',

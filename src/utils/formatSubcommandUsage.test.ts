@@ -11,7 +11,7 @@ describe('formatSubcommandUsage', () => {
     }
 
     expect(formatSubcommandUsage(mr, GLAB_CLI_REFERENCE)).toBe(
-      'mr <merge-request> [--repo <group/project>] [-- <patch-options...>]',
+      'mr [merge-request] [--repo <group/project>] [-- <patch-options...>]',
     );
   });
 });

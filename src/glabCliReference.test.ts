@@ -14,7 +14,7 @@ describe('GLAB_CLI_REFERENCE', () => {
   it('describes the command for discovery and help', () => {
     expect(GLAB_CLI_REFERENCE).toMatchObject({
       summary: 'Review GitLab merge requests',
-      usage: 'mr <merge-request> [--repo <group/project>]',
+      usage: 'mr [merge-request] [--repo <group/project>]',
       description:
         'Review GitLab merge requests in Hunk without requiring the glab CLI.',
     });
@@ -37,10 +37,13 @@ describe('GLAB_CLI_REFERENCE', () => {
     expect(GLAB_CLI_REFERENCE.subcommands).toHaveLength(1);
     expect(mr?.name).toBe('mr');
     expect(mr?.forms.map(({ args }) => args)).toEqual([
+      '',
       '123',
       "'!123'",
       '123 --repo gitlab-org/cli',
       '123 --repo 34675721',
+      "'gitlab-org/cli!123'",
+      'https://gitlab.com/gitlab-org/cli/-/merge_requests/123',
     ]);
   });
 });
