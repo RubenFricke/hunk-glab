@@ -9,7 +9,7 @@ describe('renderGlabHelp', () => {
       [
         'Usage: hunk glab <command>',
         '',
-        'Review GitLab merge requests in Hunk without requiring the glab CLI.',
+        'Review GitLab merge requests, commits, and comparisons in Hunk without requiring the glab CLI.',
         '',
         'GitLab commands:',
         '  mr [merge-request] [--repo <group/project>] [-- <patch-options...>]',

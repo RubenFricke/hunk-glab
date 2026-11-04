@@ -13,10 +13,10 @@ describe('GLAB_CLI_REFERENCE', () => {
 
   it('describes the command for discovery and help', () => {
     expect(GLAB_CLI_REFERENCE).toMatchObject({
-      summary: 'Review GitLab merge requests',
-      usage: 'mr [merge-request] [--repo <group/project>]',
+      summary: 'Review GitLab merge requests, commits, and comparisons',
+      usage: '<mr|commit|compare> <target> [--repo <group/project>]',
       description:
-        'Review GitLab merge requests in Hunk without requiring the glab CLI.',
+        'Review GitLab merge requests, commits, and comparisons in Hunk without requiring the glab CLI.',
     });
   });
 
