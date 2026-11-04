@@ -13,14 +13,17 @@ export interface GitCheckout {
   readonly branch: string;
   /** The full SHA of HEAD, in lowercase. */
   readonly sha: string;
+  /** The pushed tip of the branch, when it tracks one. */
+  readonly upstreamSha?: string;
 }
 
 /**
- * Reads the current branch and the exact commit of HEAD.
+ * Reads the current branch, the exact commit of HEAD and, when the branch
+ * tracks one, its pushed upstream commit.
  *
  * @param cwd - The directory of the command.
  * @param signal - Stops Git when the run is cancelled.
- * @returns The branch and the SHA of HEAD.
+ * @returns The branch, the SHA of HEAD and the optional upstream SHA.
  * @throws {HunkExtensionUserError} When the run is cancelled, Git is missing or
  *   fails, HEAD is detached, or the branch name has a control character.
  */
@@ -32,7 +35,7 @@ const readGitCheckout = async (
   const isCancelled = (): boolean => signal.aborted;
   const read = async (
     args: readonly string[],
-    subject: 'branch' | 'HEAD',
+    subject: 'branch' | 'HEAD' | 'upstream',
   ): Promise<string> => {
     if (isCancelled()) {
       throw buildCancelledError();
@@ -85,7 +88,23 @@ const readGitCheckout = async (
       'Git failed while reading the current HEAD.',
     );
   }
-  return { branch, sha: sha.toLowerCase() };
+  /** Not every branch tracks an upstream, so a failure here means none. */
+  const upstreamSha = await read(
+    ['rev-parse', '--verify', '@{upstream}'],
+    'upstream',
+  ).catch((error: unknown) => {
+    if (isCancelled()) {
+      throw error;
+    }
+    return '';
+  });
+  return {
+    branch,
+    sha: sha.toLowerCase(),
+    ...(FULL_SHA.test(upstreamSha)
+      ? { upstreamSha: upstreamSha.toLowerCase() }
+      : {}),
+  };
 };
 
 export default readGitCheckout;

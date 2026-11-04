@@ -44,6 +44,32 @@ describe('readGitCheckout', () => {
     });
   });
 
+  it('reads the pushed upstream when HEAD is ahead of it', async () => {
+    const remote = join(repo, 'remote.git');
+    git(repo, 'init', '--quiet', '--bare', remote);
+    git(repo, 'remote', 'add', 'origin', remote);
+    git(repo, 'push', '--quiet', '--set-upstream', 'origin', 'feature/x');
+    const pushed = git(repo, 'rev-parse', 'HEAD');
+    git(
+      repo,
+      '-c',
+      'user.name=Test',
+      '-c',
+      'user.email=test@example.com',
+      'commit',
+      '--quiet',
+      '--allow-empty',
+      '-m',
+      'local',
+    );
+
+    expect(await readGitCheckout(repo, SIGNAL)).toEqual({
+      branch: 'feature/x',
+      sha: git(repo, 'rev-parse', 'HEAD'),
+      upstreamSha: pushed,
+    });
+  });
+
   it('says a detached HEAD cannot name its merge request', async () => {
     git(repo, 'checkout', '--quiet', '--detach');
 
