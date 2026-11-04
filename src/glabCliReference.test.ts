@@ -50,4 +50,17 @@ describe('GLAB_CLI_REFERENCE', () => {
       'https://gitlab.com/gitlab-org/cli/-/merge_requests/123',
     ]);
   });
+
+  it('describes hunk glab commit with every form it accepts', () => {
+    const commit = GLAB_CLI_REFERENCE.subcommands.find(
+      ({ name }) => name === 'commit',
+    );
+
+    expect(commit?.forms.map(({ args }) => args)).toEqual([
+      'abcdef1',
+      'abcdef1 --repo gitlab-org/cli',
+      'gitlab-org/cli@abcdef1',
+      'https://gitlab.com/gitlab-org/cli/-/commit/abcdef1',
+    ]);
+  });
 });

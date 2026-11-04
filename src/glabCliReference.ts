@@ -119,6 +119,11 @@ const GLAB_CLI_REFERENCE: GlabCliReference = {
           args: 'abcdef1 --repo gitlab-org/cli',
           description: 'use an explicit project',
         },
+        {
+          args: 'gitlab-org/cli@abcdef1',
+          description: 'name the project and commit',
+        },
+        { args: 'https://gitlab.com/gitlab-org/cli/-/commit/abcdef1' },
       ],
     },
     {
