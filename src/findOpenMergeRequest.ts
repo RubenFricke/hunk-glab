@@ -1,5 +1,6 @@
 import { HunkExtensionUserError } from 'hunkdiff/extension';
 
+import fetchForkParent from './fetchForkParent.ts';
 import fetchGitLab, {
   type GitLabEnv,
   type GitLabFetch,
@@ -29,7 +30,9 @@ interface FindOpenMergeRequestOptions {
  * checkout. The commit decides, not the branch name, so another merge request
  * with the same branch name is never chosen. When GitLab does not know HEAD or
  * has no match for it, the pushed upstream gets one more try, so a local commit
- * on top of a pushed branch still finds its merge request.
+ * on top of a pushed branch still finds its merge request. GitLab only lists
+ * the merge requests that target a project, so for a fork without a match the
+ * project it was forked from is searched too.
  *
  * @param options - The project, the checkout and the transport.
  * @returns The merge request.
@@ -44,65 +47,85 @@ const findOpenMergeRequest = async ({
   env,
 }: FindOpenMergeRequestOptions): Promise<MergeRequestTarget> => {
   const { branch, sha, upstreamSha } = checkout;
-  const projectName = describeProject(project);
-  const describeCommit = (commit: string): string =>
-    `${projectName}:${branch}@${commit.slice(0, SHORT_SHA_LENGTH)}`;
-  const commitNotFound = (commit: string): string =>
-    `GitLab could not find an accessible commit at ${projectName}@${commit}.`;
-
-  /** Throws for an unknown commit; returns undefined when nothing matches. */
-  const search = async (
-    commit: string,
-  ): Promise<MergeRequestTarget | undefined> => {
-    const bytes = await fetchGitLab({
-      apiPath: `projects/${encodeProject(project)}/repository/commits/${commit}/merge_requests?state=opened&per_page=100`,
-      accept: 'application/json',
-      name: describeCommit(commit),
-      maxBytes: MAX_MATCHES_BYTES,
-      tooLargeMessage:
-        'GitLab merge-request matches exceed the 1 MiB safety limit.',
-      emptyMessage: 'GitLab returned empty merge-request matches.',
-      notFoundMessage: commitNotFound(commit),
-      signal,
-      fetch,
-      env,
-    });
-    const [match] = parseMergeRequestMatches(
-      parseJsonBody(bytes, 'GitLab returned malformed merge-request matches.'),
-    );
-    return match;
-  };
-
   const commits =
     upstreamSha === undefined || upstreamSha === sha
       ? [sha]
       : [sha, upstreamSha];
-  let failure: HunkExtensionUserError | undefined;
-  for (const commit of commits) {
-    try {
-      const match = await search(commit);
-      if (match !== undefined) {
-        return match;
-      }
-      failure = new HunkExtensionUserError(
-        `No accessible open merge request matches ${describeCommit(commit)}.`,
-        {
-          suggestions: [
-            'Pass a merge-request number, group/project!123, or URL explicitly.',
-          ],
-        },
+
+  /** Returns the failure instead of throwing it, so a fork can try its parent. */
+  const findIn = async (
+    searched: GitLabProject,
+  ): Promise<MergeRequestTarget | HunkExtensionUserError> => {
+    const projectName = describeProject(searched);
+    const describeCommit = (commit: string): string =>
+      `${projectName}:${branch}@${commit.slice(0, SHORT_SHA_LENGTH)}`;
+    const commitNotFound = (commit: string): string =>
+      `GitLab could not find an accessible commit at ${projectName}@${commit}.`;
+
+    /** Throws for an unknown commit; returns undefined when nothing matches. */
+    const search = async (
+      commit: string,
+    ): Promise<MergeRequestTarget | undefined> => {
+      const bytes = await fetchGitLab({
+        apiPath: `projects/${encodeProject(searched)}/repository/commits/${commit}/merge_requests?state=opened&per_page=100`,
+        accept: 'application/json',
+        name: describeCommit(commit),
+        maxBytes: MAX_MATCHES_BYTES,
+        tooLargeMessage:
+          'GitLab merge-request matches exceed the 1 MiB safety limit.',
+        emptyMessage: 'GitLab returned empty merge-request matches.',
+        notFoundMessage: commitNotFound(commit),
+        signal,
+        fetch,
+        env,
+      });
+      const [match] = parseMergeRequestMatches(
+        parseJsonBody(
+          bytes,
+          'GitLab returned malformed merge-request matches.',
+        ),
       );
-    } catch (error) {
-      if (
-        !(error instanceof HunkExtensionUserError) ||
-        error.message !== commitNotFound(commit)
-      ) {
-        throw error;
+      return match;
+    };
+
+    let failure = new HunkExtensionUserError('No commit was searched.');
+    for (const commit of commits) {
+      try {
+        const match = await search(commit);
+        if (match !== undefined) {
+          return match;
+        }
+        failure = new HunkExtensionUserError(
+          `No accessible open merge request matches ${describeCommit(commit)}.`,
+          {
+            suggestions: [
+              'Pass a merge-request number, group/project!123, or URL explicitly.',
+            ],
+          },
+        );
+      } catch (error) {
+        if (
+          !(error instanceof HunkExtensionUserError) ||
+          error.message !== commitNotFound(commit)
+        ) {
+          throw error;
+        }
+        failure = error;
       }
-      failure = error;
     }
+    return failure;
+  };
+
+  const found = await findIn(project);
+  if (!(found instanceof HunkExtensionUserError)) {
+    return found;
   }
-  throw failure ?? new HunkExtensionUserError('No commit to search.');
+  const parent = await fetchForkParent({ project, signal, fetch, env });
+  const foundInParent = parent === undefined ? found : await findIn(parent);
+  if (foundInParent instanceof HunkExtensionUserError) {
+    throw found;
+  }
+  return foundInParent;
 };
 
 export default findOpenMergeRequest;

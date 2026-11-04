@@ -14,11 +14,17 @@ const MATCH = {
 
 const UPSTREAM = 'a'.repeat(40);
 
+/** Answers a project lookup like gitlab.com does for a project that is no fork. */
+const NO_FORK = (): Response => Response.json({ id: 34675721 });
+
 const find = (
   respond: (url: string) => Response,
   checkout: { branch: string; sha: string; upstreamSha?: string } = CHECKOUT,
+  respondToProject: (url: string) => Response = NO_FORK,
 ) => {
-  const recorded = recordFetch(respond);
+  const recorded = recordFetch((url) =>
+    url.includes('/repository/commits/') ? respond(url) : respondToProject(url),
+  );
   return {
     requests: recorded.requests,
     result: findOpenMergeRequest({
@@ -110,7 +116,9 @@ describe('findOpenMergeRequest', () => {
     await expect(result).rejects.toMatchObject({
       name: 'HunkExtensionUserError',
     });
-    expect(requests).toHaveLength(1);
+    expect(
+      requests.filter(({ url }) => url.includes('/repository/commits/')),
+    ).toHaveLength(1);
   });
 
   it('does not hide another failure behind the upstream', async () => {
@@ -123,5 +131,63 @@ describe('findOpenMergeRequest', () => {
       message: `GitLab rejected the configured token for gitlab-org/cli:feature/x@${SHA.slice(0, 12)}.`,
     });
     expect(requests).toHaveLength(1);
+  });
+
+  describe('from a fork', () => {
+    const FORK = { kind: 'path', path: 'scop/cli-2' } as const;
+    const forkOf = (url: string): Response =>
+      url.endsWith('/projects/scop%2Fcli-2')
+        ? Response.json({ forked_from_project: { id: 34675721 } })
+        : NO_FORK();
+
+    const findFromFork = (respond: (url: string) => Response) => {
+      const recorded = recordFetch((url) =>
+        url.includes('/repository/commits/') ? respond(url) : forkOf(url),
+      );
+      return {
+        requests: recorded.requests,
+        result: findOpenMergeRequest({
+          project: FORK,
+          checkout: CHECKOUT,
+          signal: new AbortController().signal,
+          fetch: recorded.fetch,
+          env: {},
+        }),
+      };
+    };
+
+    it('finds the merge request in the project the fork came from', async () => {
+      const { requests, result } = findFromFork((url) =>
+        url.includes('/projects/34675721/')
+          ? Response.json([MATCH])
+          : Response.json([]),
+      );
+
+      expect(await result).toEqual({ project: PROJECT, iid: 4307 });
+      expect(requests.map(({ url }) => url.split('?')[0])).toEqual([
+        `https://gitlab.com/api/v4/projects/scop%2Fcli-2/repository/commits/${SHA}/merge_requests`,
+        'https://gitlab.com/api/v4/projects/scop%2Fcli-2',
+        `https://gitlab.com/api/v4/projects/34675721/repository/commits/${SHA}/merge_requests`,
+      ]);
+    });
+
+    it('names the fork when the parent has no match either', async () => {
+      const { result } = findFromFork(() => Response.json([]));
+
+      await expect(result).rejects.toMatchObject({
+        message: `No accessible open merge request matches scop/cli-2:feature/x@${SHA.slice(0, 12)}.`,
+      });
+    });
+
+    it('keeps a match in the fork itself, without asking the parent', async () => {
+      const { requests, result } = findFromFork(() =>
+        Response.json([
+          { ...MATCH, references: { full: 'scop/cli-2!3' }, iid: 3 },
+        ]),
+      );
+
+      expect(await result).toEqual({ project: FORK, iid: 3 });
+      expect(requests).toHaveLength(1);
+    });
   });
 });
