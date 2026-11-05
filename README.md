@@ -2,6 +2,8 @@
 
 Review GitLab merge requests, commits and comparisons in [Hunk](https://hunk.dev) from the command line, the way `hunk gh` reviews GitHub pull requests.
 
+<img alt="hunk glab mr opens a GitLab merge request from its URL in Hunk, with its title, state, author and branches above the review. hunk glab commit then opens a commit from the group/project@sha shorthand, with its title, author, date and short SHA." src="demo/hero.gif" width="940">
+
 ## Install
 
 ```bash
@@ -92,6 +94,7 @@ Each release lists the Hunk it needs. When a release raises that minimum, its no
 bun install
 bun run check                                     # typecheck, lint, format, knip, tests
 hunk --extension /path/to/hunk-glab glab --help   # try a checkout without installing
+./demo/record.sh                                  # re-record the README demo (needs vhs and gitlab.com)
 ```
 
 hunk-glab is based on the design and behaviour of [hunk-gh](https://github.com/modem-dev/hunk-gh) (MIT), the GitHub extension that Hunk now bundles as `hunk gh`.
