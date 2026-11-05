@@ -1,6 +1,11 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": ["src/index.ts"],
-  "project": ["src/**/*.ts", "test/**/*.ts", "eslint/**/*.js"],
+  "entry": ["src/index.ts", "scripts/*.ts"],
+  "project": [
+    "src/**/*.ts",
+    "test/**/*.ts",
+    "scripts/**/*.ts",
+    "eslint/**/*.js"
+  ],
   "tags": ["-lintignore"]
 }
