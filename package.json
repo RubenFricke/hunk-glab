@@ -1,6 +1,6 @@
 {
   "name": "hunk-glab",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "Review GitLab merge requests in Hunk from the command line, the way hunk gh reviews GitHub pull requests",
   "keywords": [
